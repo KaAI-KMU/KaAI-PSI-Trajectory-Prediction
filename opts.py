@@ -1,6 +1,6 @@
 import argparse
 
-
+# about data
 def get_opts():
     parser = argparse.ArgumentParser(description='PyTorch implementation of the PSI2.0')
     # about data
