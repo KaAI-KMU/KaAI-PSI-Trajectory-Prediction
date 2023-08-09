@@ -111,8 +111,6 @@ def validate_traj(epoch, model, dataloader, args, recorder, writer):
             pass
         traj_pred[..., 2] = traj_pred[..., 0] + traj_pred[..., 2] / 2
 
-        break
-
     score = recorder.eval_traj_epoch_calculate(writer)
     return recorder, score
 
