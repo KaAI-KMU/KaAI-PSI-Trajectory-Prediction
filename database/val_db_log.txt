@@ -1,0 +1,38 @@
+Initialize val database 
+04Aug2023-11h15m26s
+missing frames bbox noticed! , video_0112, track_13, 244, frames observed from , 255 
+missing frames bbox noticed! , video_0112, track_14, 236, frames observed from , 247 
+2 splits: , [66, 169] 
+missing frames bbox noticed! , video_0113, track_82, 443, frames observed from , 451 
+2 splits: , [156, 286] 
+missing frames bbox noticed! , video_0114, track_7, 262, frames observed from , 284 
+2 splits: , [140, 91] 
+missing frames bbox noticed! , video_0114, track_8, 243, frames observed from , 248 
+2 splits: , [163, 79] 
+missing frames bbox noticed! , video_0119, track_9, 413, frames observed from , 421 
+2 splits: , [62, 350] 
+missing frames bbox noticed! , video_0120, track_14, 185, frames observed from , 206 
+Single ped occurs too short. video_0120, track_10, 52 
+missing frames bbox noticed! , video_0121, track_32, 155, frames observed from , 178 
+2 splits: , [70, 82] 
+missing frames bbox noticed! , video_0123, track_31, 333, frames observed from , 356 
+missing frames bbox noticed! , video_0127, track_72, 221, frames observed from , 251 
+2 splits: , [62, 103] 
+missing frames bbox noticed! , video_0127, track_73, 229, frames observed from , 254 
+2 splits: , [68, 99] 
+missing frames bbox noticed! , video_0130, track_0, 277, frames observed from , 286 
+2 splits: , [151, 125] 
+missing frames bbox noticed! , video_0131, track_40, 440, frames observed from , 451 
+missing frames bbox noticed! , video_0136, track_46, 123, frames observed from , 126 
+missing frames bbox noticed! , video_0136, track_8, 348, frames observed from , 391 
+2 splits: , [228, 97] 
+missing frames bbox noticed! , video_0136, track_43, 338, frames observed from , 358 
+2 splits: , [83, 254] 
+missing frames bbox noticed! , video_0136, track_45, 336, frames observed from , 358 
+2 splits: , [79, 256] 
+missing frames bbox noticed! , video_0136, track_9, 340, frames observed from , 360 
+2 splits: , [96, 243] 
+Single ped occurs too short. video_0137, track_3, 40 
+!!!!! Video, video_0137, has no valid ped sequence! Remove this video! 
+missing frames bbox noticed! , video_0144, track_8, 382, frames observed from , 390 
+2 splits: , [120, 261] 
