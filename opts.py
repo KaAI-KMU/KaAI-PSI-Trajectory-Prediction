@@ -51,8 +51,8 @@ def get_opts():
                         help='Backbone type [resnet50 | vgg16 | faster_rcnn]')
     parser.add_argument('--freeze_backbone', type=bool, default=False,
                         help='[True | False]')
-    parser.add_argument('--model_name', type=str, default='lstm',
-                        help='model name, [lstm, lstmed]')
+    parser.add_argument('--model_name', type=str, default='sgnet_traj_bbox',
+                        help='model name, [sgnet_traj_bbox, ]')
     parser.add_argument('--model_configs', type=dict, default={},
                         help='framework information')
 
