@@ -14,8 +14,6 @@ def get_opts():
                         help='task name: [ped_intent | ped_traj | driving_decision]')
     parser.add_argument('--epochs', type=int, default=None,
                         help='Total number of training epochs')
-    parser.add_argument('--observe_length', type=float, default=None,
-                        help='Sequence length of one observed clips')    
     parser.add_argument('--video_splits', type=str, default='./*_split.json',
                         help='video splits, [PSI1.0_split | PSI2.0_split | PSI2.0_split_paper]')
     parser.add_argument('--dataset_root_path', type=str, default='psi_dataset',
@@ -35,9 +33,9 @@ def get_opts():
     parser.add_argument('--intent_type', type=str, default='mean',
                         help='Type of intention labels, out of 24 annotators. [major | mean | separate | soft_vote];'
                              'only when separate, the nlp reasoning can help, otherwise may take weighted mean of the nlp embeddings')
-    parser.add_argument('--observe_length', type=float, default=15,
+    parser.add_argument('--observe_length', type=float, default=None,
                         help='Sequence length of one observed clips')
-    parser.add_argument('--predict_length', type=float, default=45,
+    parser.add_argument('--predict_length', type=float, default=None,
                         help='Sequence length of predicted trajectory/intention')
     parser.add_argument('--max_track_size', type=float, default=60,
                         help='Sequence length of observed + predicted trajectory/intention')
@@ -106,6 +104,7 @@ def get_opts():
     cfg.batch_size = args.batch_size if args.batch_size is not None else cfg.batch_size
     cfg.epochs = args.epochs if args.epochs is not None else cfg.epochs
     cfg.observe_length = args.observe_length if args.observe_length is not None else cfg.observe_length
+    cfg.predict_length = args.predict_length if args.predict_length is not None else cfg.predict_length
     
     args.model_name = cfg.model_name
 
