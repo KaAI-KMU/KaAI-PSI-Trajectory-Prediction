@@ -12,6 +12,10 @@ def get_opts():
                         help='task name: [PSI1.0 | PSI2.0]')
     parser.add_argument('--task_name', type=str, default='ped_traj',
                         help='task name: [ped_intent | ped_traj | driving_decision]')
+    parser.add_argument('--epochs', type=int, default=None,
+                        help='Total number of training epochs')
+    parser.add_argument('--observe_length', type=float, default=None,
+                        help='Sequence length of one observed clips')    
     parser.add_argument('--video_splits', type=str, default='./*_split.json',
                         help='video splits, [PSI1.0_split | PSI2.0_split | PSI2.0_split_paper]')
     parser.add_argument('--dataset_root_path', type=str, default='psi_dataset',
