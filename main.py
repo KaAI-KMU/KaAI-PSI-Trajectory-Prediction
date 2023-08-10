@@ -13,7 +13,7 @@ from utils.log import RecordResults
 from utils.evaluate_results import evaluate_traj
 
 
-def main(args):
+def main(args, config):
     writer = SummaryWriter(args.checkpoint_path)
     recorder = RecordResults(args)
     ''' 1. Load database '''
@@ -24,7 +24,7 @@ def main(args):
     train_loader, val_loader, test_loader = get_dataloader(args)
 
     ''' 2. Create models '''
-    model, optimizer, scheduler = build_model(args)
+    model, optimizer, scheduler = build_model(config)
 
     # ''' 3. Train '''
     train_traj(model, optimizer, scheduler, train_loader, val_loader, args, recorder, writer)
@@ -44,9 +44,9 @@ def main(args):
     # print("Ranking score of test set: ", score)
 
 if __name__ == '__main__':
-    args = get_opts()
+    args, cfg = get_opts()
     # Dataset
-    if args.dataset == 'PSI2.0':
+    if cfg.dataset == 'PSI2.0':
         args.video_splits = os.path.join(args.dataset_root_path, 'PSI2.0_TrainVal/splits/PSI2_split.json')
     elif args.dataset == 'PSI1.0':
         args.video_splits = os.path.join(args.dataset_root_path, 'PSI1.0/splits/PSI1_split.json')
@@ -67,21 +67,13 @@ if __name__ == '__main__':
         args.intent_model = False
         args.traj_model = False
         raise Exception("Unknown task name!")
-    
-    args.weight_decay = 0.0005
-    args.lr_decay_step = 10
-    args.lr_decay_gamma = 0.9
 
     args.max_bbox = [args.image_shape[0], args.image_shape[1], args.image_shape[0], args.image_shape[1]]
     args.min_bbox = [0, 0, 0, 0]
-
-    if args.lr is None:
-        args.lr = 1e-3 if args.task_name == 'ped_intent' else 1e-2
-
     # Record
     now = datetime.now()
     time_folder = now.strftime('%Y%m%d%H%M%S')
-    args.checkpoint_path = os.path.join(args.checkpoint_path, args.task_name, args.dataset, args.model_name, time_folder)
+    args.checkpoint_path = os.path.join(args.checkpoint_path, args.task_name, cfg.dataset, cfg.model_name, time_folder)
     if not os.path.exists(args.checkpoint_path):
         os.makedirs(args.checkpoint_path)
     with open(os.path.join(args.checkpoint_path, 'args.txt'), 'w') as f:
@@ -91,4 +83,4 @@ if __name__ == '__main__':
     if not os.path.isdir(result_path):
         os.makedirs(result_path)
 
-    main(args)
+    main(args, cfg)

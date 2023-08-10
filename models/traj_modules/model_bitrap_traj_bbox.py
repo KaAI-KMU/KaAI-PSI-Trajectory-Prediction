@@ -19,15 +19,15 @@ def reconstructed_probability(x):
     return p
 
 class BiTraPNP(nn.Module):
-    def __init__(self, args):
+    def __init__(self, model_cfg):
         super(BiTraPNP, self).__init__()
-        self.args = copy.deepcopy(args)
+        self.model_cfg = copy.deepcopy(model_cfg)
         self.param_scheduler = None
-        self.input_dim = self.args.input_dim
-        self.pred_dim = self.args.pred_dim
-        self.hidden_size = self.args.hidden_size
-        self.nu = args.nu
-        self.sigma = args.sigma
+        self.input_dim = self.model_cfg.input_dim
+        self.pred_dim = self.model_cfg.pred_dim
+        self.hidden_size = self.model_cfg.hidden_size
+        self.nu = model_cfg.nu
+        self.sigma = model_cfg.sigma
         self.node_future_encoder_h = nn.Sequential(nn.Linear(self.input_dim, self.hidden_size//2),nn.ReLU())
         self.gt_goal_encoder = nn.GRU(input_size=self.pred_dim,
                                         hidden_size=self.hidden_size//2,
@@ -38,14 +38,14 @@ class BiTraPNP(nn.Module):
                                     nn.ReLU(),
                                     nn.Linear(128, 64),
                                     nn.ReLU(),
-                                    nn.Linear(64, self.args.LATENT_DIM*2))
+                                    nn.Linear(64, self.model_cfg.latent_dim*2))
         # posterior
         self.q_z_xy = nn.Sequential(nn.Linear(self.hidden_size + self.hidden_size,
                                             128),
                                     nn.ReLU(),
                                     nn.Linear(128, 64),
                                     nn.ReLU(),
-                                    nn.Linear(64, self.args.LATENT_DIM*2))
+                                    nn.Linear(64, self.model_cfg.latent_dim*2))
         
         
 
@@ -53,8 +53,8 @@ class BiTraPNP(nn.Module):
         # get mu, sigma
         # 1. sample z from piror
         z_mu_logvar_p = self.p_z_x(enc_h)
-        z_mu_p = z_mu_logvar_p[:, :self.args.LATENT_DIM]
-        z_logvar_p = z_mu_logvar_p[:, self.args.LATENT_DIM:]
+        z_mu_p = z_mu_logvar_p[:, :self.model_cfg.latent_dim]
+        z_logvar_p = z_mu_logvar_p[:, self.model_cfg.latent_dim:]
         if target is not None:
             # 2. sample z from posterior, for training only
             initial_h = self.node_future_encoder_h(cur_state)
@@ -65,8 +65,8 @@ class BiTraPNP(nn.Module):
             target_h = target_h.reshape(-1, target_h.shape[1] * target_h.shape[2])
             
             z_mu_logvar_q = self.q_z_xy(torch.cat([enc_h, target_h], dim=-1))
-            z_mu_q = z_mu_logvar_q[:, :self.args.LATENT_DIM]
-            z_logvar_q = z_mu_logvar_q[:, self.args.LATENT_DIM:]
+            z_mu_q = z_mu_logvar_q[:, :self.model_cfg.latent_dim]
+            z_logvar_q = z_mu_logvar_q[:, self.model_cfg.latent_dim:]
             Z_mu = z_mu_q
             Z_logvar = z_logvar_q
 
@@ -85,7 +85,7 @@ class BiTraPNP(nn.Module):
         
         # 4. Draw sample
         with torch.set_grad_enabled(False):
-            K_samples = torch.normal(self.nu, self.sigma, size = (enc_h.shape[0], K, self.args.LATENT_DIM)).cuda()
+            K_samples = torch.normal(self.nu, self.sigma, size = (enc_h.shape[0], K, self.model_cfg.latent_dim)).cuda()
 
         probability = reconstructed_probability(K_samples)
         Z_std = torch.exp(0.5 * Z_logvar)
@@ -97,12 +97,12 @@ class BiTraPNP(nn.Module):
         return Z, KLD, probability
 
 
-    def forward(self, h_x, last_input, K, target_y=None):
+    def forward(self, h_x, last_input, K, target_y=None, Training=True):
         '''
         Params:
 
         '''
         Z, KLD, probability = self.gaussian_latent_net(h_x, last_input, K, target_y, z_mode=False)
         enc_h_and_z = torch.cat([h_x.unsqueeze(1).repeat(1, Z.shape[1], 1), Z], dim=-1)
-        dec_h = enc_h_and_z if self.args.DEC_WITH_Z else h_x
+        dec_h = enc_h_and_z if self.model_cfg.dec_with_z else h_x
         return dec_h, KLD, probability

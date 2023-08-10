@@ -35,7 +35,7 @@ def train_traj(model, optimizer, scheduler, train_loader, val_loader, args, reco
                 print(f"New best validation score ({val_score}), saving model...")
                 best_val_score = val_score
                 torch.save(model.state_dict(), args.checkpoint_path + f'/best.pth')
-                
+
         torch.save(model.state_dict(), args.checkpoint_path + f'/latest.pth')
 
 
@@ -65,6 +65,8 @@ def train_traj_epoch(epoch, model, optimizer, epoch_loss, dataloader, args, reco
 
         recorder.train_traj_batch_update(itern, data, traj_gt.detach().cpu().numpy(), traj_pred.detach().cpu().numpy(),
                                          loss.item(), traj_loss.item())
+        
+        break
 
     epoch_loss['loss_traj'].append(np.mean(batch_losses['loss_traj']))
 
