@@ -31,9 +31,9 @@ def get_opts():
     parser.add_argument('--intent_type', type=str, default='mean',
                         help='Type of intention labels, out of 24 annotators. [major | mean | separate | soft_vote];'
                              'only when separate, the nlp reasoning can help, otherwise may take weighted mean of the nlp embeddings')
-    parser.add_argument('--observe_length', type=float, default=None,
+    parser.add_argument('--observe_length', type=float, default=0,
                         help='Sequence length of one observed clips')
-    parser.add_argument('--predict_length', type=float, default=None,
+    parser.add_argument('--predict_length', type=float, default=0,
                         help='Sequence length of predicted trajectory/intention')
     parser.add_argument('--max_track_size', type=float, default=60,
                         help='Sequence length of observed + predicted trajectory/intention')
@@ -61,7 +61,7 @@ def get_opts():
                         help='Path of the stored checkpoints')
     parser.add_argument('--epochs', type=int, default=None,
                         help='Total number of training epochs')
-    parser.add_argument('--batch_size', type=int, default=16,
+    parser.add_argument('--batch_size', type=int, default=None,
                         help='Batch size of dataloader')
     parser.add_argument('--num_workers', type=int, default=4,
                         help='Number of workers of dataloader')
@@ -99,11 +99,17 @@ def get_opts():
     cfg = EasyDict(cfg)
     
     # args overwrite cfg
-    cfg.batch_size = args.batch_size if args.batch_size is not None else cfg.batch_size
-    cfg.epochs = args.epochs if args.epochs is not None else cfg.epochs
-    cfg.observe_length = args.observe_length if args.observe_length is not None else cfg.observe_length
-    cfg.predict_length = args.predict_length if args.predict_length is not None else cfg.predict_length
-    
+    if args.batch_size is not None:
+        cfg.optimization.batch_size = args.batch_size
+    else:
+        args.batch_size = cfg.optimization.batch_size
+    if args.epochs is not None:
+        cfg.optimization.epochs = args.num_epochs
+    else:
+        args.epochs = cfg.optimization.num_epochs
+
+    args.observe_length = cfg.model_cfg.observe_length
+    args.predict_length = cfg.model_cfg.predict_length
     args.model_name = cfg.model_name
 
     return args, cfg
