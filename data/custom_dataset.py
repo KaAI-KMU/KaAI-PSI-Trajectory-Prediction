@@ -10,6 +10,7 @@ import copy
 from utils import utils
 
 
+
 class VideoDataset(torch.utils.data.Dataset):
     def __init__(self, data, args, stage='train'):
         super(VideoDataset, self).__init__()
@@ -29,7 +30,10 @@ class VideoDataset(torch.utils.data.Dataset):
         frame_list = self.data['frame'][index][:self.args.observe_length] # return first 15 frames as observed
 
         bboxes = self.data['bbox'][index] # return all 60 frames #[:-1] # take first 15 frames as input
-
+        
+        if self.args.speed:
+            speed = self.data['speed'][index]
+            
         intention_binary = self.data['intention_binary'][index] # all frames intentions are returned
         intention_prob = self.data['intention_prob'][index] # all frames, 3-dimension votes probability
 
@@ -66,7 +70,8 @@ class VideoDataset(torch.utils.data.Dataset):
             max_bbox=np.array(self.args.max_bbox)
         )
         if self.args.traj_model:
-            bboxes = bboxes - bboxes[:1, :] # relative trajectory
+            bboxes = bboxes - bboxes[:1, :] 
+            # bboxes = bboxes - bboxes[:1, :] # relative trajectory
         
         if self.args.model_name == 'SGNetTrajBbox':
             t = []
@@ -101,7 +106,11 @@ class VideoDataset(torch.utils.data.Dataset):
             'disagree_score': disagree_score,
             'targets': targets
         }
-
+        
+        
+        if self.args.speed:
+            data['speed'] = speed 
+            
         return data
 
     def __len__(self):
@@ -378,3 +387,30 @@ class VideoDataset(torch.utils.data.Dataset):
                                        (size - img_size[1]) // 2))
             return padded_image
 
+    def convert_normalize_bboxes(self, all_bboxes, normalize, bbox_type):
+        '''input box type is x1y1x2y2 in original resolution'''
+        for i in range(len(all_bboxes)):
+            if len(all_bboxes[i]) == 0:
+                continue
+            bbox = np.array(all_bboxes[i])
+            # NOTE ltrb to cxcywh
+            if bbox_type == 'cxcywh':
+                bbox[..., [2, 3]] = bbox[..., [2, 3]] - bbox[..., [0, 1]]
+                bbox[..., [0, 1]] += bbox[..., [2, 3]]/2
+            # NOTE Normalize bbox
+            if normalize == 'zero-one':
+                # W, H  = all_resolutions[i][0]
+                _min = np.array(self.args.min_bbox)[None, :]
+                _max = np.array(self.args.max_bbox)[None, :]
+                bbox = (bbox - _min) / (_max - _min)
+            elif normalize == 'plus-minus-one':
+                # W, H  = all_resolutions[i][0]
+                _min = np.array(self.args.min_bbox)[None, :]
+                _max = np.array(self.args.max_bbox)[None, :]
+                bbox = (2 * (bbox - _min) / (_max - _min)) - 1
+            elif normalize == 'none':
+                pass
+            else:
+                raise ValueError(normalize)
+            all_bboxes[i] = bbox
+        return all_bboxes

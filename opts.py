@@ -71,6 +71,8 @@ def get_opts():
                         help='weights of loss terms, {loss_intent, loss_traj}')
     parser.add_argument('--intent_loss', type=list, default=['bce'],
                         help='loss for intent output. [bce | mse | cross_entropy]')
+    parser.add_argument('--speed', action='store_true', default=False,
+                        help='Add speed information')
     parser.add_argument('--intent_disagreement', type=float, default=1,
                         help='weather use disagreement to reweight intent loss.threshold to filter training data.'
                              'consensus > 0.5 are selected and reweigh loss; -1.0 means not use; 0.0, means all are used.')

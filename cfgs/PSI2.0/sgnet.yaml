@@ -17,6 +17,18 @@ model_cfg:
         dec_with_z: True
         K: 20
 
+        speed_module:
+                in_channels: 2
+                out_channels: 32
+                kernal_size: 3
+                stride: 1
+                padding: 1
+                dilation: 1
+                groups: 1
+                bias: True
+                padding_mode: zeros
+                
+
 optimization:
         batch_size: 16
         num_epochs: 50

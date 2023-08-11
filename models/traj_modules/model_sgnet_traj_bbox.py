@@ -14,13 +14,31 @@ LongTensor = torch.cuda.LongTensor if cuda else torch.LongTensor
 class SgnetFeatureExtractor(nn.Module):
     def __init__(self, args):
         super(SgnetFeatureExtractor, self).__init__()
-        self.embbed_size = args.hidden_size
-        self.box_embed = nn.Sequential(nn.Linear(4, self.embbed_size), 
-                                        nn.ReLU()) 
+
+        self.embbed_size = args.hidden_size 
+        self.box_embed = nn.Sequential(nn.Linear(4, self.embbed_size//2), 
+                                    nn.ReLU()) 
+
     def forward(self, inputs):
         box_input = inputs
         embedded_box_input= self.box_embed(box_input)
 
+        return embedded_box_input
+    
+class SpeedFeatureExtractor(nn.Module):
+
+    def __init__(self, args):
+        super(SpeedFeatureExtractor, self).__init__()
+        
+
+        self.embbed_size = args.hidden_size
+        self.speed_embed = nn.Sequential(nn.Linear(1, self.embbed_size//2),  #self.embbed_size
+                                    nn.ReLU()) 
+
+    def forward(self, inputs):
+        speed_input = inputs
+        embedded_box_input= self.speed_embed(speed_input.type(torch.FloatTensor).cuda())
+        
         return embedded_box_input
     
 
@@ -33,7 +51,14 @@ class SGNetTrajBbox(nn.Module):
         self.dec_steps = model_cfg.dec_steps # prediction step
         self.dataset = dataset
         self.dropout = model_cfg.dropout
-        self.feature_extractor = SgnetFeatureExtractor(model_cfg)
+        self.use_speed = model_cfg.get('speed_module', None) 
+
+        if self.use_speed:
+            self.feature_extractor = SgnetFeatureExtractor(model_cfg)
+            self.speed_feature_extractor = SpeedFeatureExtractor(model_cfg)    
+        else:
+            self.feature_extractor = SgnetFeatureExtractor(model_cfg)
+            
         self.pred_dim = model_cfg.pred_dim
         self.K = model_cfg.K
         self.map = False
@@ -169,19 +194,25 @@ class SGNetTrajBbox(nn.Module):
         return all_goal_traj, all_cvae_dec_traj, total_KLD, total_probabilities
             
     def forward(self, data, training=True):
-        inputs = data['bboxes'][:,:self.observe_length,:].to(device).type(FloatTensor)
+        bboxes = data['bboxes'][:,:self.observe_length,:].to(device).type(FloatTensor)
         targets = data['targets'].to(device).type(FloatTensor)
         self.training = training
         if torch.is_tensor(0):
             start_index = start_index[0].item()
         if self.dataset in ['PSI2.0','JAAD','PIE']:
-            traj_input = self.feature_extractor(inputs)
-            all_goal_traj, all_cvae_dec_traj, KLD, total_probabilities = self.encoder(inputs, targets, traj_input)
+            bbox_input = self.feature_extractor(bboxes)
+            if self.use_speed:
+                speed = data['speed'][:, :self.observe_length, :].cuda()
+                speed_input = self.speed_feature_extractor(speed)
+                traj_input = torch.cat((bbox_input , speed_input), dim=2)
+            else:
+                traj_input = bbox_input
+            all_goal_traj, all_cvae_dec_traj, KLD, total_probabilities = self.encoder(bboxes, targets, traj_input)
         elif self.dataset in ['ETH', 'HOTEL','UNIV','ZARA1', 'ZARA2']:
-            traj_input_temp = self.feature_extractor(inputs[:,start_index:,:])
-            traj_input = traj_input_temp.new_zeros((inputs.size(0), inputs.size(1), traj_input_temp.size(-1)))
+            traj_input_temp = self.feature_extractor(bboxes[:,start_index:,:])
+            traj_input = traj_input_temp.new_zeros((bboxes.size(0), bboxes.size(1), traj_input_temp.size(-1)))
             traj_input[:,start_index:,:] = traj_input_temp
-            all_goal_traj, all_cvae_dec_traj, KLD, total_probabilities = self.encoder(inputs, targets, traj_input, None, start_index)
+            all_goal_traj, all_cvae_dec_traj, KLD, total_probabilities = self.encoder(bboxes, targets, traj_input, None, start_index)
         
         self.forward_ret_dict['all_goal_traj'] = all_goal_traj
         self.forward_ret_dict['all_cvae_dec_traj'] = all_cvae_dec_traj
