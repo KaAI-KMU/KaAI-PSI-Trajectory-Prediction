@@ -14,50 +14,29 @@ LongTensor = torch.cuda.LongTensor if cuda else torch.LongTensor
 class SgnetFeatureExtractor(nn.Module):
     def __init__(self, args):
         super(SgnetFeatureExtractor, self).__init__()
-
-        self.embbed_size = args.hidden_size 
-        self.box_embed = nn.Sequential(nn.Linear(4, self.embbed_size//2), 
-                                    nn.ReLU()) 
-
+        self.embbed_size = args.embed_dim
+        self.box_embed = nn.Sequential(nn.Linear(args.input_dim, self.embbed_size), 
+                                        nn.ReLU()) 
     def forward(self, inputs):
         box_input = inputs
         embedded_box_input= self.box_embed(box_input)
 
         return embedded_box_input
     
-class SpeedFeatureExtractor(nn.Module):
-
-    def __init__(self, args):
-        super(SpeedFeatureExtractor, self).__init__()
-        
-
-        self.embbed_size = args.hidden_size
-        self.speed_embed = nn.Sequential(nn.Linear(1, self.embbed_size//2),  #self.embbed_size
-                                    nn.ReLU()) 
-
-    def forward(self, inputs):
-        speed_input = inputs
-        embedded_box_input= self.speed_embed(speed_input.type(torch.FloatTensor).cuda())
-        
-        return embedded_box_input
-    
 
 class SGNetTrajBbox(nn.Module):
     def __init__(self, model_cfg, dataset):
         super(SGNetTrajBbox, self).__init__()
-        self.cvae = BiTraPNP(model_cfg)
+        self.cvae = BiTraPNP(model_cfg.cvae)
         self.hidden_size = model_cfg.hidden_size # GRU hidden size
         self.enc_steps = model_cfg.enc_steps # observation step
         self.dec_steps = model_cfg.dec_steps # prediction step
         self.dataset = dataset
         self.dropout = model_cfg.dropout
         self.use_speed = model_cfg.get('speed_module', None) 
-
+        self.feature_extractor = SgnetFeatureExtractor(model_cfg.bbox_module)
         if self.use_speed:
-            self.feature_extractor = SgnetFeatureExtractor(model_cfg)
-            self.speed_feature_extractor = SpeedFeatureExtractor(model_cfg)    
-        else:
-            self.feature_extractor = SgnetFeatureExtractor(model_cfg)
+            self.speed_feature_extractor = SgnetFeatureExtractor(model_cfg.speed_module)    
             
         self.pred_dim = model_cfg.pred_dim
         self.K = model_cfg.K

@@ -5,28 +5,32 @@ model_cfg:
         observe_length: 15
         predict_length: 45
 
-        hidden_size: 512
+        bbox_module:
+                input_dim: 4
+                embed_dim: 256
+
+        speed_module:
+                input_dim: 1
+                embed_dim: 128
+        
+        cvae:
+                input_dim: 4
+                pred_dim: 4
+                latent_dim: 32
+                hidden_size: 512
+                nu: 0.0
+                sigma: 1.5
+                latent_dim: 32
+                dec_with_z: True
+
+        input_dim: 4
+        pred_dim: 4
+        hidden_size: 384
+        latent_dim: 32
         enc_steps: 15
         dec_steps: 45
         dropout: 0.0
-        nu: 0.0
-        sigma: 1.5
-        pred_dim: 4
-        input_dim: 4
-        latent_dim: 32
-        dec_with_z: True
         K: 20
-
-        speed_module:
-                in_channels: 2
-                out_channels: 32
-                kernal_size: 3
-                stride: 1
-                padding: 1
-                dilation: 1
-                groups: 1
-                bias: True
-                padding_mode: zeros
                 
 
 optimization:
