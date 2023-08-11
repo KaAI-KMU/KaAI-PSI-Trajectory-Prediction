@@ -4,6 +4,8 @@ import json
 
 from tqdm import tqdm
 
+from utils import utils
+
 cuda = True if torch.cuda.is_available() else False
 device = torch.device("cuda:0" if cuda else "cpu")
 FloatTensor = torch.cuda.FloatTensor if cuda else torch.FloatTensor
@@ -99,19 +101,25 @@ def validate_traj(epoch, model, dataloader, args, recorder, writer):
         bs, ts, _ = traj_gt.shape
         # if args.normalize_bbox == 'subtract_first_frame':
         #     traj_pred = traj_pred + data['bboxes'][:, :1, :].type(FloatTensor)
+        
+        min_bbox = torch.tensor(args.min_bbox).type(FloatTensor).to(device)
+        max_bbox = torch.tensor(args.max_bbox).type(FloatTensor).to(device)
+        traj_pred = utils.convert_unnormalize_bboxes(
+            bboxes=traj_pred,
+            normalize=args.normalize_bbox,
+            bbox_type='ltrb',
+            min_bbox=min_bbox,
+            max_bbox=max_bbox,
+        )
+        traj_gt = utils.convert_unnormalize_bboxes(
+            bboxes=traj_gt,
+            normalize=args.normalize_bbox,
+            bbox_type='ltrb',
+            min_bbox=min_bbox,
+            max_bbox=max_bbox,
+        )
+
         recorder.eval_traj_batch_update(itern, data, traj_gt.detach().cpu().numpy(), traj_pred.detach().cpu().numpy())
-
-        max_bbox = torch.tensor(args.max_bbox)
-        if args.normalize_bbox == 'zero-one':
-            traj_gt[...,:] *= max_bbox.cuda()
-            traj_pred[...,:] *= max_bbox.cuda()
-        elif args.normalize_bbox == 'plus-minus-one':
-            raise NotImplementedError
-        else:
-            pass
-        traj_pred[..., 2] = traj_pred[..., 0] + traj_pred[..., 2] / 2
-
-        break
 
     score = recorder.eval_traj_epoch_calculate(writer)
     return recorder, score
@@ -151,7 +159,7 @@ def get_test_traj_gt(model, dataloader, args, dset='test'):
     model.eval()
     gt = {}
     for itern, data in enumerate(dataloader):
-        traj_pred = model(data)
+        traj_pred = model(data, training=False)
         traj_gt = data['bboxes'][:, args.observe_length:, :].type(FloatTensor)
         # traj_gt = data['original_bboxes'][:, args.observe_length:, :].type(FloatTensor)
         bs, ts, _ = traj_gt.shape

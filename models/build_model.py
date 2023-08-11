@@ -9,30 +9,11 @@ device = torch.device("cuda:0" if cuda else "cpu")
 FloatTensor = torch.cuda.FloatTensor if cuda else torch.FloatTensor
 LongTensor = torch.cuda.LongTensor if cuda else torch.LongTensor
 
-def build_model(args):
-    if args.model_name == 'sgnet_traj_bbox':
-        model = get_sgnet_traj_bbox(args).to(device)
-        optimizer, scheduler = model.build_optimizer(args)
-        return model, optimizer, scheduler
-    else:
-        raise NotImplementedError
+__all__ = {
+    'SGNetTrajBbox': SGNetTrajBbox,
+}
 
-def get_sgnet_traj_bbox(args):
-    model_configs = {}
-    model_configs['traj_model_opts'] = Namespace(**{
-        'hidden_size': 512,
-        'enc_steps': 15,
-        'dec_steps': 45,
-        'dropout': 0.0,
-        'nu': 0.0,
-        'sigma': 1.5,
-        'pred_dim': 4,
-        'input_dim': 4,
-        'LATENT_DIM': 32,
-        'DEC_WITH_Z': True,
-        'dataset': args.dataset,
-        'K': 20,
-        'observe_length': args.observe_length,
-    })
-    model = SGNetTrajBbox(model_configs['traj_model_opts'])
-    return model
+def build_model(config):
+    model = __all__[config.model_name](model_cfg=config.model_cfg, dataset=config.dataset).to(device)
+    optimizer, scheduler = model.build_optimizer(config.optimization, config.lr_scheduler)
+    return model, optimizer, scheduler

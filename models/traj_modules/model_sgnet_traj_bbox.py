@@ -25,17 +25,17 @@ class SgnetFeatureExtractor(nn.Module):
     
 
 class SGNetTrajBbox(nn.Module):
-    def __init__(self, args):
+    def __init__(self, model_cfg, dataset):
         super(SGNetTrajBbox, self).__init__()
-        self.cvae = BiTraPNP(args)
-        self.hidden_size = args.hidden_size # GRU hidden size
-        self.enc_steps = args.enc_steps # observation step
-        self.dec_steps = args.dec_steps # prediction step
-        self.dataset = args.dataset
-        self.dropout = args.dropout
-        self.feature_extractor = SgnetFeatureExtractor(args)
-        self.pred_dim = args.pred_dim
-        self.K = args.K
+        self.cvae = BiTraPNP(model_cfg)
+        self.hidden_size = model_cfg.hidden_size # GRU hidden size
+        self.enc_steps = model_cfg.enc_steps # observation step
+        self.dec_steps = model_cfg.dec_steps # prediction step
+        self.dataset = dataset
+        self.dropout = model_cfg.dropout
+        self.feature_extractor = SgnetFeatureExtractor(model_cfg)
+        self.pred_dim = model_cfg.pred_dim
+        self.K = model_cfg.K
         self.map = False
         if self.dataset in ['PSI2.0','JAAD','PIE']:
             # the predict shift is in pixel
@@ -62,7 +62,7 @@ class SGNetTrajBbox(nn.Module):
         self.goal_hidden_to_traj = nn.Sequential(nn.Linear(self.hidden_size//4,
                                                     self.hidden_size),
                                                     nn.ReLU(inplace=True))
-        self.cvae_to_dec_hidden = nn.Sequential(nn.Linear(self.hidden_size + args.LATENT_DIM,
+        self.cvae_to_dec_hidden = nn.Sequential(nn.Linear(self.hidden_size + model_cfg.latent_dim,
                                                 self.hidden_size),
                                                 nn.ReLU(inplace=True))
         self.enc_to_dec_hidden = nn.Sequential(nn.Linear(self.hidden_size,
@@ -89,7 +89,7 @@ class SGNetTrajBbox(nn.Module):
         self.dec_cell = nn.GRUCell(self.hidden_size + self.hidden_size//4, self.hidden_size)
 
         self.criterion = rmse_loss().to(device)
-        self.observe_length = args.observe_length
+        self.observe_length = model_cfg.observe_length
         self.forward_ret_dict = {}
     
     def SGE(self, goal_hidden):
@@ -213,8 +213,9 @@ class SGNetTrajBbox(nn.Module):
         return loss_dict
         
         
-    def build_optimizer(self, args):
-        optimizer = torch.optim.Adam(self.parameters(), lr=args.lr)
-        scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, factor=0.2, patience=5,
-                                                               min_lr=1e-10, verbose=True)
+    def build_optimizer(self, optim_cfg, scheduler_cfg):
+        optimizer = torch.optim.Adam(self.parameters(), lr=optim_cfg.lr, weight_decay=optim_cfg.weight_decay)
+        scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, factor=scheduler_cfg.factor,
+                                                               patience=scheduler_cfg.patience, min_lr=scheduler_cfg.min_lr,
+                                                               verbose=True)
         return optimizer, scheduler

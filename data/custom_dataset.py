@@ -6,17 +6,9 @@ import cv2
 import PIL
 from PIL import Image
 import copy
-
 from transformers import BertTokenizer, BertForSequenceClassification, BertConfig, BertModel
 
-# from keras_nlp.api_export import keras_nlp_export
-# from keras_nlp.models.bert.bert_presets import backbone_presets
-# from keras_nlp.models.bert.bert_presets import classifier_presets
-# from keras_nlp.tokenizers.word_piece_tokenizer import WordPieceTokenizer
-# from keras_nlp.utils.python_utils import classproperty
-
-
-
+from utils import utils
 
 
 class VideoDataset(torch.utils.data.Dataset):
@@ -67,16 +59,17 @@ class VideoDataset(torch.utils.data.Dataset):
                 bboxes[f] = [xtl, ytl, xrb, yrb]
 
         original_bboxes = copy.deepcopy(bboxes)
-        bboxes = self.convert_normalize_bboxes(
+        bboxes = utils.convert_normalize_bboxes(
             bboxes,
             normalize=self.args.normalize_bbox,
-            bbox_type=None if self.args.bbox_type=='cxcywh' else 'cxcywh'
+            bbox_type=None if self.args.bbox_type=='cxcywh' else 'cxcywh',
+            min_bbox=np.array(self.args.min_bbox),
+            max_bbox=np.array(self.args.max_bbox)
         )
         if self.args.traj_model:
-            input_bboxes = copy.deepcopy(bboxes)
-            # bboxes = bboxes - bboxes[:1, :] # relative trajectory
+            bboxes = bboxes - bboxes[:1, :] # relative trajectory
         
-        if self.args.model_name == 'sgnet_traj_bbox':
+        if self.args.model_name == 'SGNetTrajBbox':
             t = []
             predict_length = bboxes.shape[0] - self.args.observe_length
             for i in range(self.args.observe_length):
@@ -99,7 +92,7 @@ class VideoDataset(torch.utils.data.Dataset):
             'local_featmaps': local_featmaps,
             'global_featmaps': global_featmaps,
             'original_bboxes': original_bboxes, # bboxes before normalization
-            'bboxes': input_bboxes,
+            'bboxes': bboxes,
             # 'intention_onehot': intention_onehot,
             'intention_binary': intention_binary,
             'intention_prob': intention_prob,
@@ -404,30 +397,3 @@ class VideoDataset(torch.utils.data.Dataset):
                                        (size - img_size[1]) // 2))
             return padded_image
 
-    def convert_normalize_bboxes(self, all_bboxes, normalize, bbox_type):
-        '''input box type is x1y1x2y2 in original resolution'''
-        for i in range(len(all_bboxes)):
-            if len(all_bboxes[i]) == 0:
-                continue
-            bbox = np.array(all_bboxes[i])
-            # NOTE ltrb to cxcywh
-            if bbox_type == 'cxcywh':
-                bbox[..., [2, 3]] = bbox[..., [2, 3]] - bbox[..., [0, 1]]
-                bbox[..., [0, 1]] += bbox[..., [2, 3]]/2
-            # NOTE Normalize bbox
-            if normalize == 'zero-one':
-                # W, H  = all_resolutions[i][0]
-                _min = np.array(self.args.min_bbox)[None, :]
-                _max = np.array(self.args.max_bbox)[None, :]
-                bbox = (bbox - _min) / (_max - _min)
-            elif normalize == 'plus-minus-one':
-                # W, H  = all_resolutions[i][0]
-                _min = np.array(self.args.min_bbox)[None, :]
-                _max = np.array(self.args.max_bbox)[None, :]
-                bbox = (2 * (bbox - _min) / (_max - _min)) - 1
-            elif normalize == 'none':
-                pass
-            else:
-                raise ValueError(normalize)
-            all_bboxes[i] = bbox
-        return all_bboxes

@@ -1,9 +1,13 @@
 import argparse
+import yaml
 
+from easydict import EasyDict
 
+# about data
 def get_opts():
     parser = argparse.ArgumentParser(description='PyTorch implementation of the PSI2.0')
     # about data
+    parser.add_argument('--config_file', type=str, default='cfgs/PSI2.0/sgnet.yaml', help='specify the config file for training')
     parser.add_argument('--dataset', type=str, default='PSI2.0',
                         help='task name: [PSI1.0 | PSI2.0]')
     parser.add_argument('--task_name', type=str, default='ped_traj',
@@ -27,9 +31,9 @@ def get_opts():
     parser.add_argument('--intent_type', type=str, default='mean',
                         help='Type of intention labels, out of 24 annotators. [major | mean | separate | soft_vote];'
                              'only when separate, the nlp reasoning can help, otherwise may take weighted mean of the nlp embeddings')
-    parser.add_argument('--observe_length', type=float, default=15,
+    parser.add_argument('--observe_length', type=float, default=0,
                         help='Sequence length of one observed clips')
-    parser.add_argument('--predict_length', type=float, default=45,
+    parser.add_argument('--predict_length', type=float, default=0,
                         help='Sequence length of predicted trajectory/intention')
     parser.add_argument('--max_track_size', type=float, default=60,
                         help='Sequence length of observed + predicted trajectory/intention')
@@ -45,28 +49,22 @@ def get_opts():
                         help='Image shape: PSI(1280, 720).')
     parser.add_argument('--load_image', type=bool, default=False,
                         help='Do not load image to backbone if not necessary')
-
+    
     # about models
     parser.add_argument('--backbone', type=str, default='resnet50',
                         help='Backbone type [resnet50 | vgg16 | faster_rcnn]')
     parser.add_argument('--freeze_backbone', type=bool, default=False,
                         help='[True | False]')
-    parser.add_argument('--model_name', type=str, default='sgnet_traj_bbox',
-                        help='model name, [sgnet_traj_bbox, ]')
-    parser.add_argument('--model_configs', type=dict, default={},
-                        help='framework information')
-
+    
     # about training
     parser.add_argument('--checkpoint_path', type=str, default='./ckpts',
                         help='Path of the stored checkpoints')
-    parser.add_argument('--epochs', type=int, default=100,
+    parser.add_argument('--epochs', type=int, default=None,
                         help='Total number of training epochs')
-    parser.add_argument('--batch_size', type=int, default=32,
+    parser.add_argument('--batch_size', type=int, default=None,
                         help='Batch size of dataloader')
     parser.add_argument('--num_workers', type=int, default=0,
                         help='Number of workers of dataloader')
-    parser.add_argument('--lr', type=float, default=5e-04,
-                        help='General learning rate, default as 1e-3 for intent and 1e-4 for traj')
     parser.add_argument('--resume', type=str, default='',
                         help='ckpt path+filename to be resumed.')
     parser.add_argument('--loss_weights', type=dict, default={'loss_intent': 0.0, 'loss_traj': 1.0, 'loss_driving': 0.0},
@@ -82,7 +80,7 @@ def get_opts():
                         help='weight for intent bce loss: e.g., 0.5 ~= n_neg_class_samples(5118)/n_pos_class_samples(11285)')
     parser.add_argument('--traj_loss', type=list, default=['mse'],
                         help='loss for intent output. [bce | mse | cross_entropy]')
-
+    
     # other parameteres
     parser.add_argument('--val_freq', type=int, default=3,
                         help='frequency of validate')
@@ -90,5 +88,28 @@ def get_opts():
                         help='frequency of test')
     parser.add_argument('--print_freq', type=int, default=10,
                         help='frequency of print')
+    
+    args = EasyDict(vars(parser.parse_args()))
+    
+    with open(args.config_file, 'r') as f:
+        try:
+             cfg= yaml.safe_load(f, Loader=yaml.FullLoader)
+        except:
+             cfg = yaml.safe_load(f)
+    cfg = EasyDict(cfg)
+    
+    # args overwrite cfg
+    if args.batch_size is not None:
+        cfg.optimization.batch_size = args.batch_size
+    else:
+        args.batch_size = cfg.optimization.batch_size
+    if args.epochs is not None:
+        cfg.optimization.epochs = args.epochs
+    else:
+        args.epochs = cfg.optimization.num_epochs
 
-    return parser.parse_args()
+    args.observe_length = cfg.model_cfg.observe_length
+    args.predict_length = cfg.model_cfg.predict_length
+    args.model_name = cfg.model_name
+
+    return args, cfg
