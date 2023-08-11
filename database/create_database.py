@@ -80,7 +80,7 @@ def init_db(video_list, db_log, args):
     dataroot = args.dataset_root_path
     # key_frame_folder = 'cognitive_annotation_key_frame'
     if args.dataset == 'PSI2.0':
-        extended_folder = 'PSI2.0_TrainVal/annotations/cognitive_annotation_extended'
+        extended_folder = 'PSI2.0_TrainVal/annotations/cognitive_annotation_key_frame'
     elif args.dataset == 'PSI1.0':
         extended_folder = 'PSI1.0/annotations/cognitive_annotation_extended'
 
@@ -97,6 +97,7 @@ def init_db(video_list, db_log, args):
             cog_annotation = annotation['pedestrians'][ped]['cognitive_annotations']
             nlp_vid_uid_pairs = cog_annotation.keys()
             add_ped_case(db, video_name, ped, nlp_vid_uid_pairs)
+            
     return db
 
 
@@ -152,7 +153,7 @@ def update_db_annotations(db, db_log, args):
     dataroot = args.dataset_root_path
     # key_frame_folder = 'cognitive_annotation_key_frame'
     if args.dataset == 'PSI2.0':
-        extended_folder = 'PSI2.0_TrainVal/annotations/cognitive_annotation_extended'
+        extended_folder = 'PSI2.0_TrainVal/annotations/cognitive_annotation_key_frame'
     elif args.dataset == 'PSI1.0':
         extended_folder = 'PSI1.0/annotations/cognitive_annotation_extended'
 

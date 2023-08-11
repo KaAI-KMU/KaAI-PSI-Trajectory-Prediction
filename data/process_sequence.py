@@ -89,6 +89,8 @@ def get_intent(database, video_name, ped_id, args):
                         labels[j] = 0
                     elif labels[j] == 'cross':
                         labels[j] = 1
+                    elif labels[j] == '':
+                        labels[j] = 0.3
                     else:
                         raise Exception("Unknown intent label: ", labels[j])
                 # [0, 0.5, 1]

@@ -7,6 +7,16 @@ import PIL
 from PIL import Image
 import copy
 
+from transformers import BertTokenizer, BertForSequenceClassification, BertConfig, BertModel
+
+# from keras_nlp.api_export import keras_nlp_export
+# from keras_nlp.models.bert.bert_presets import backbone_presets
+# from keras_nlp.models.bert.bert_presets import classifier_presets
+# from keras_nlp.tokenizers.word_piece_tokenizer import WordPieceTokenizer
+# from keras_nlp.utils.python_utils import classproperty
+
+
+
 
 
 class VideoDataset(torch.utils.data.Dataset):
@@ -26,7 +36,7 @@ class VideoDataset(torch.utils.data.Dataset):
         assert video_ids[0] == video_ids[-1] # all video_id should be the same
         assert ped_ids[0] == ped_ids[-1]  # all video_id should be the same
         frame_list = self.data['frame'][index][:self.args.observe_length] # return first 15 frames as observed
-
+        description = self.data['description'][index]
         bboxes = self.data['bbox'][index] # return all 60 frames #[:-1] # take first 15 frames as input
 
         intention_binary = self.data['intention_binary'][index] # all frames intentions are returned
@@ -45,10 +55,10 @@ class VideoDataset(torch.utils.data.Dataset):
         #     images, cropped_images = self.load_images(video_id, frame_list, bboxes)
         # else:
         #     images, cropped_images = [], []
-
+        
         global_featmaps, local_featmaps = self.load_features(video_ids, ped_ids, frame_list)
         reason_features = self.load_reason_features(video_ids, ped_ids, frame_list)
-
+        description_features = self.description_to_embeddings(description)
         for f in range(len(frame_list)): #(len(bboxes)):
             box = bboxes[f]
             xtl, ytl, xrb, yrb = box
@@ -77,8 +87,11 @@ class VideoDataset(torch.utils.data.Dataset):
             t = torch.stack(t)
             jh = torch.from_numpy(bboxes[:self.args.observe_length]).unsqueeze(dim=1).repeat((1,predict_length,1))
             targets = t - jh
+            # description_features = description_features[]
         else:
-            targets = torch.from_numpy(bboxes[self.args.observe_length:,:])         
+            targets = torch.from_numpy(bboxes[self.args.observe_length:,:])     
+            
+            
 
         data = {
             # 'cropped_images': cropped_images,
@@ -95,17 +108,32 @@ class VideoDataset(torch.utils.data.Dataset):
             # 'reason_origin': reason_origin,
             'frames': np.array([int(f) for f in frame_list]),
             'video_id': video_ids[0], #int(video_id[0][0].split('_')[1])
-            'ped_id': ped_ids[0],
+            'ped_id': ped_ids[0], 
             'disagree_score': disagree_score,
-            'targets': targets
+            'targets': targets,
+            'description' : description,
+            'description_features': description_features
         }
 
         return data
 
     def __len__(self):
         return len(self.data['frame'])
-
-    ''' All below are util functions '''
+    
+    def description_to_embeddings(self, description):
+        tokenizer = BertTokenizer.from_pretrained('bert-base-uncased')
+        model = BertModel.from_pretrained('bert-base-uncased')
+        
+        # 한 문장으로 합치기
+        for _ in range(len(description)):
+            single_description = ''.join([item for sublist in description for item in sublist if item])
+        
+        inputs = tokenizer(single_description, return_tensors='pt', padding=True, truncation=True)
+        outputs = model(**inputs)
+        embeddings = outputs.last_hidden_state.mean(dim=1) # (1, 768)
+        
+        return embeddings.repeat(len(description), 1) # (60, 768)
+    
     def load_reason_features(self, video_ids, ped_ids, frame_list):
         feat_list = []
         video_name = video_ids[0]
@@ -120,8 +148,8 @@ class VideoDataset(torch.utils.data.Dataset):
 
         feat_list = [] if len(feat_list) < 1 else torch.stack(feat_list)
         return feat_list
-
-
+            
+            
     def load_features(self, video_ids, ped_ids, frame_list):
         global_featmaps = []
         local_featmaps = []

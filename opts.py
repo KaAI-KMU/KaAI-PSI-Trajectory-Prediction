@@ -61,9 +61,9 @@ def get_opts():
                         help='Path of the stored checkpoints')
     parser.add_argument('--epochs', type=int, default=100,
                         help='Total number of training epochs')
-    parser.add_argument('--batch_size', type=int, default=128,
+    parser.add_argument('--batch_size', type=int, default=32,
                         help='Batch size of dataloader')
-    parser.add_argument('--num_workers', type=int, default=4,
+    parser.add_argument('--num_workers', type=int, default=0,
                         help='Number of workers of dataloader')
     parser.add_argument('--lr', type=float, default=5e-04,
                         help='General learning rate, default as 1e-3 for intent and 1e-4 for traj')
