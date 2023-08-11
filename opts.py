@@ -104,7 +104,7 @@ def get_opts():
     else:
         args.batch_size = cfg.optimization.batch_size
     if args.epochs is not None:
-        cfg.optimization.epochs = args.num_epochs
+        cfg.optimization.epochs = args.epochs
     else:
         args.epochs = cfg.optimization.num_epochs
 
