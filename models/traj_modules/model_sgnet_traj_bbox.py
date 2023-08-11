@@ -14,8 +14,8 @@ LongTensor = torch.cuda.LongTensor if cuda else torch.LongTensor
 class SgnetFeatureExtractor(nn.Module):
     def __init__(self, args):
         super(SgnetFeatureExtractor, self).__init__()
-        self.embbed_size = args.hidden_size
-        self.box_embed = nn.Sequential(nn.Linear(4, self.embbed_size), 
+        self.embbed_size = args.embed_dim
+        self.box_embed = nn.Sequential(nn.Linear(args.input_dim, self.embbed_size), 
                                         nn.ReLU()) 
     def forward(self, inputs):
         box_input = inputs
@@ -27,13 +27,13 @@ class SgnetFeatureExtractor(nn.Module):
 class SGNetTrajBbox(nn.Module):
     def __init__(self, model_cfg, dataset):
         super(SGNetTrajBbox, self).__init__()
-        self.cvae = BiTraPNP(model_cfg)
+        self.cvae = BiTraPNP(model_cfg.cvae)
         self.hidden_size = model_cfg.hidden_size # GRU hidden size
         self.enc_steps = model_cfg.enc_steps # observation step
         self.dec_steps = model_cfg.dec_steps # prediction step
         self.dataset = dataset
         self.dropout = model_cfg.dropout
-        self.feature_extractor = SgnetFeatureExtractor(model_cfg)
+        self.feature_extractor = SgnetFeatureExtractor(model_cfg.feature_extractor)
         self.pred_dim = model_cfg.pred_dim
         self.K = model_cfg.K
         self.map = False
