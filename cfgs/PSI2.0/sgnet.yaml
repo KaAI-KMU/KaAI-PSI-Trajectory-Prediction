@@ -41,4 +41,4 @@ lr_scheduler:
         scheduler: ReduceLROnPlateau
         factor: 0.2
         patience: 5
-        min_lr: 1e-10
+        min_lr: 0.0000000001 # 1e-10
