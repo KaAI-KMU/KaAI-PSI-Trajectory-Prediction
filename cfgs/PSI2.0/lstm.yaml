@@ -1,0 +1,31 @@
+model_name: LSTMTrajBbox
+dataset: PSI2.0
+
+model_cfg:
+        observe_length: 15
+        predict_length: 45
+
+        enc_in_dim: 4
+        enc_out_dim: 6
+        dec_in_emb_dim: 0
+        dec_out_dim: 6
+        output_dim: 4
+        n_layers: 1
+        dropout: 0.5
+        observe_length: 15
+        predict_length: 45
+        return_sequence: true
+        output_activation: 'none'
+
+optimization:
+        batch_size: 128
+        num_epochs: 50
+
+        optimizer: Adam
+        lr: 0.001
+        weight_decay: 0.0
+        eps: 0.0000001
+
+lr_scheduler:
+        scheduler: ExponentialLR
+        gamma: 0.9
