@@ -49,6 +49,8 @@ def get_opts():
                         help='Image shape: PSI(1280, 720).')
     parser.add_argument('--load_image', type=bool, default=False,
                         help='Do not load image to backbone if not necessary')
+    parser.add_argument('--pretrained_path', type=str, default='psi_dataset/pre-trained/best.pth',
+                        help='Path of the pre-trained pt file')
     
     # about models
     parser.add_argument('--backbone', type=str, default='resnet50',
