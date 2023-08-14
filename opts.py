@@ -84,7 +84,7 @@ def get_opts():
                         help='loss for intent output. [bce | mse | cross_entropy]')
     
     # other parameteres
-    parser.add_argument('--val_freq', type=int, default=3,
+    parser.add_argument('--val_freq', type=int, default=0,
                         help='frequency of validate')
     parser.add_argument('--test_freq', type=int, default=1,
                         help='frequency of test')
