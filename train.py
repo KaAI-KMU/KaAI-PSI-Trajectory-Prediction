@@ -68,8 +68,6 @@ def train_traj_epoch(epoch, model, optimizer, epoch_loss, dataloader, args, reco
                                          loss.item(), traj_loss.item())
         
 
-        
-
     epoch_loss['loss_traj'].append(np.mean(batch_losses['loss_traj']))
 
     recorder.train_traj_epoch_calculate(writer)
