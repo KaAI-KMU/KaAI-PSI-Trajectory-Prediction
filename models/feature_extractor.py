@@ -25,11 +25,13 @@ class SgnetFeatureExtractor(nn.Module):
     
 
 class DescFeatureExtractor(nn.Module):
-    def __init__(self, args):
+    def __init__(self, args, freeze_params=False):
         super(DescFeatureExtractor, self).__init__()
         self.tokenizer = BertTokenizer.from_pretrained('bert-base-uncased')
         self.model = BertModel.from_pretrained('bert-base-uncased')
         self.fc = SgnetFeatureExtractor(args)
+        if freeze_params:
+            self.freeze_params()
         
     def forward(self, desc, frame_len):
         inputs = self.tokenizer(desc, return_tensors='pt', padding=True, truncation=True).to(device)
