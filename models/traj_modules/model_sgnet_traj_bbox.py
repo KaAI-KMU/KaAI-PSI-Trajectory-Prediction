@@ -6,25 +6,13 @@ import torch.nn.functional as F
 from utils.utils import rmse_loss, cvae_multi
 from ..model_template import ModelTemplate
 from .model_bitrap_traj_bbox import BiTraPNP
+from ..feature_extractor import *
 
 cuda = True if torch.cuda.is_available() else False
 device = torch.device("cuda:0" if cuda else "cpu")
 FloatTensor = torch.cuda.FloatTensor if cuda else torch.FloatTensor
 LongTensor = torch.cuda.LongTensor if cuda else torch.LongTensor
 
-
-class SgnetFeatureExtractor(nn.Module):
-    def __init__(self, args):
-        super(SgnetFeatureExtractor, self).__init__()
-        self.embbed_size = args.embed_dim
-        self.box_embed = nn.Sequential(nn.Linear(args.input_dim, self.embbed_size), 
-                                        nn.ReLU()) 
-    def forward(self, inputs):
-        box_input = inputs
-        embedded_box_input= self.box_embed(box_input)
-        return embedded_box_input
-    
-    
 
 class SGNetTrajBbox(ModelTemplate):
     def __init__(self, model_cfg, dataset):
@@ -35,14 +23,14 @@ class SGNetTrajBbox(ModelTemplate):
         self.dec_steps = model_cfg.dec_steps # prediction step
         self.dataset = dataset
         self.dropout = model_cfg.dropout
-        self.use_speed = model_cfg.get('speed_module', None) 
+        self.use_speed = model_cfg.get('speed_module', None) is not None
+        self.use_desc = model_cfg.get('description_module', None) is not None
         
-        if self.use_speed:
-            self.feature_extractor = SgnetFeatureExtractor(model_cfg.bbox_module).type(FloatTensor)
-            self.speed_feature_extractor = SgnetFeatureExtractor(model_cfg.speed_module).type(FloatTensor)
-        else:
-            self.feature_extractor = SgnetFeatureExtractor(model_cfg.feature_extractor)
-            
+        self.bbox_module = SgnetFeatureExtractor(model_cfg.bbox_module)
+        self.speed_module = SgnetFeatureExtractor(model_cfg.speed_module) if self.use_speed else None
+        self.desc_module = DescFeatureExtractor(model_cfg.description_module) if self.use_desc else None
+        self.desc_module.freeze_params()
+        
         self.pred_dim = model_cfg.pred_dim
         self.K = model_cfg.K
         self.map = False
@@ -184,16 +172,21 @@ class SGNetTrajBbox(ModelTemplate):
         if torch.is_tensor(0):
             start_index = start_index[0].item()
         if self.dataset in ['PSI2.0','JAAD','PIE']:
-            bbox_input = self.feature_extractor(bboxes)
+            input_list = []
+            bbox_input = self.bbox_module(bboxes)
+            input_list.append(bbox_input)
             if self.use_speed:
                 speed = data['speed'][:, :self.observe_length, :].to(device).type(FloatTensor)
-                speed_input = self.speed_feature_extractor(speed)
-                traj_input = torch.cat((bbox_input , speed_input), dim=2)
-            else:
-                traj_input = bbox_input
+                speed_input = self.speed_module(speed)
+                input_list.append(speed_input)
+            if self.use_desc:
+                desc = data['single_description'].to(device).type(FloatTensor)
+                desc_input = self.desc_module(desc, frame_len=bbox_input.shape[1])
+                input_list.append(desc_input)
+            traj_input = torch.cat(input_list, dim=-1)
             all_goal_traj, all_cvae_dec_traj, KLD, total_probabilities = self.encoder(bboxes, targets, traj_input)
         elif self.dataset in ['ETH', 'HOTEL','UNIV','ZARA1', 'ZARA2']:
-            traj_input_temp = self.feature_extractor(bboxes[:,start_index:,:])
+            traj_input_temp = self.bbox_module(bboxes[:,start_index:,:])
             traj_input = traj_input_temp.new_zeros((bboxes.size(0), bboxes.size(1), traj_input_temp.size(-1)))
             traj_input[:,start_index:,:] = traj_input_temp
             all_goal_traj, all_cvae_dec_traj, KLD, total_probabilities = self.encoder(bboxes, targets, traj_input, None, start_index)
