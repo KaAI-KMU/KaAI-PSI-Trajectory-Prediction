@@ -107,14 +107,16 @@ def validate_traj(epoch, model, dataloader, args, recorder, writer):
         traj_pred = utils.convert_unnormalize_bboxes(
             bboxes=traj_pred,
             normalize=args.normalize_bbox,
-            bbox_type='ltrb',
+            # bbox_type='ltrb' if args.bbox_type == 'cxcywh' else None,
+            bbox_type2cvt=None,
             min_bbox=min_bbox,
             max_bbox=max_bbox,
         )
         traj_gt = utils.convert_unnormalize_bboxes(
             bboxes=traj_gt,
             normalize=args.normalize_bbox,
-            bbox_type='ltrb',
+            # bbox_type='ltrb' if args.bbox_type == 'cxcywh' else None,
+            bbox_type2cvt=None,
             min_bbox=min_bbox,
             max_bbox=max_bbox,
         )

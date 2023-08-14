@@ -67,7 +67,8 @@ class VideoDataset(torch.utils.data.Dataset):
         bboxes = utils.convert_normalize_bboxes(
             bboxes,
             normalize=self.args.normalize_bbox,
-            bbox_type=None if self.args.bbox_type=='cxcywh' else 'cxcywh',
+            # bbox_type=None if self.args.bbox_type=='cxcywh' else 'cxcywh', # change format to cxcywh if bbox_type is ltrb
+            bbox_type2cvt=None, # change format to cxcywh if bbox_type is ltrb
             min_bbox=np.array(self.args.min_bbox),
             max_bbox=np.array(self.args.max_bbox)
         )
