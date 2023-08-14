@@ -386,31 +386,3 @@ class VideoDataset(torch.utils.data.Dataset):
             padded_image.paste(image, ((size - img_size[0]) // 2,
                                        (size - img_size[1]) // 2))
             return padded_image
-
-    def convert_normalize_bboxes(self, all_bboxes, normalize, bbox_type):
-        '''input box type is x1y1x2y2 in original resolution'''
-        for i in range(len(all_bboxes)):
-            if len(all_bboxes[i]) == 0:
-                continue
-            bbox = np.array(all_bboxes[i])
-            # NOTE ltrb to cxcywh
-            if bbox_type == 'cxcywh':
-                bbox[..., [2, 3]] = bbox[..., [2, 3]] - bbox[..., [0, 1]]
-                bbox[..., [0, 1]] += bbox[..., [2, 3]]/2
-            # NOTE Normalize bbox
-            if normalize == 'zero-one':
-                # W, H  = all_resolutions[i][0]
-                _min = np.array(self.args.min_bbox)[None, :]
-                _max = np.array(self.args.max_bbox)[None, :]
-                bbox = (bbox - _min) / (_max - _min)
-            elif normalize == 'plus-minus-one':
-                # W, H  = all_resolutions[i][0]
-                _min = np.array(self.args.min_bbox)[None, :]
-                _max = np.array(self.args.max_bbox)[None, :]
-                bbox = (2 * (bbox - _min) / (_max - _min)) - 1
-            elif normalize == 'none':
-                pass
-            else:
-                raise ValueError(normalize)
-            all_bboxes[i] = bbox
-        return all_bboxes

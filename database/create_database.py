@@ -71,6 +71,7 @@ def add_ped_case(db, video_name, ped_name, nlp_vid_uid_pairs):
             # 0: not key frame (expanded from key frames with NLP annotations)
             # 1: key frame (labeled by NLP annotations)
         }
+      
         
 def add_ped_case_speed(db, video_name, ped_name, nlp_vid_uid_pairs):
     if video_name not in db:
@@ -95,7 +96,6 @@ def add_ped_case_speed(db, video_name, ped_name, nlp_vid_uid_pairs):
             # 0: not key frame (expanded from key frames with NLP annotations)
             # 1: key frame (labeled by NLP annotations)
         }
-
 
 
 def init_db(video_list, db_log, args):

@@ -30,10 +30,6 @@ def generate_data_sequence(set_name, database, args):
             
             if args.speed:
                 speed_seq.append(database[video][ped]['cv_annotations']['speed'])
-               
-
-                
-    
 
     data_dict = {
         'frame': frame_seq,
@@ -51,10 +47,6 @@ def generate_data_sequence(set_name, database, args):
 
     return data_dict
     
-    
-    
-    
-
 
 def get_intent(database, video_name, ped_id, args):
     prob_seq = []

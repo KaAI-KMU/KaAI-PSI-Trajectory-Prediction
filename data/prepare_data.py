@@ -63,7 +63,7 @@ def get_tracks(data, seq_len, observed_seq_len, overlap, args):
 
     d_types = ['video_id', 'ped_id', 'frame', 'bbox', 'intention_binary', 'intention_prob', 'disagree_score', 'description']
     if args.speed :
-        d_types = ['video_id', 'ped_id', 'frame', 'bbox', 'intention_binary', 'intention_prob', 'disagree_score', 'description', 'speed']
+        d_types.append('speed')
     d = {}
 
     for k in d_types:
