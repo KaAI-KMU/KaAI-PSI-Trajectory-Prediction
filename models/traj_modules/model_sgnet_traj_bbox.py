@@ -28,8 +28,7 @@ class SGNetTrajBbox(ModelTemplate):
         
         self.bbox_module = SgnetFeatureExtractor(model_cfg.bbox_module)
         self.speed_module = SgnetFeatureExtractor(model_cfg.speed_module) if self.use_speed else None
-        self.desc_module = DescFeatureExtractor(model_cfg.description_module) if self.use_desc else None
-        self.desc_module.freeze_params()
+        self.desc_module = DescFeatureExtractor(model_cfg.description_module, freeze_params=True) if self.use_desc else None
         
         self.pred_dim = model_cfg.pred_dim
         self.K = model_cfg.K
