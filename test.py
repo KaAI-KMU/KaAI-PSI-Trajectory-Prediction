@@ -94,6 +94,7 @@ def predict_intent(model, dataloader, args):
 def validate_traj(epoch, model, dataloader, args, recorder, writer):
     model.eval()
     niters = len(dataloader)
+    # i=0
     for itern, data in enumerate(tqdm(dataloader, desc='Validation')):
         result_dict = model(data, training=False)
         traj_pred = result_dict['traj_pred']
@@ -120,6 +121,9 @@ def validate_traj(epoch, model, dataloader, args, recorder, writer):
         )
 
         recorder.eval_traj_batch_update(itern, data, traj_gt.detach().cpu().numpy(), traj_pred.detach().cpu().numpy())
+        # i+=1
+        # if i==20:
+        #     break
 
     score = recorder.eval_traj_epoch_calculate(writer)
     return recorder, score

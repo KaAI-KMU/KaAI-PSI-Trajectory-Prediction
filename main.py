@@ -24,7 +24,7 @@ def main(args, config):
     train_loader, val_loader, test_loader = get_dataloader(args)
 
     ''' 2. Create models '''
-    model, optimizer, scheduler = build_model(config)
+    model, optimizer, scheduler = build_model(args,config)
 
     # ''' 3. Train '''
     train_traj(model, optimizer, scheduler, train_loader, val_loader, args, recorder, writer)

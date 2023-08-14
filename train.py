@@ -45,6 +45,7 @@ def train_traj_epoch(epoch, model, optimizer, epoch_loss, dataloader, args, reco
 
     niters = len(dataloader)
     pbar = tqdm(enumerate(dataloader), total=niters, desc=f"train")
+    # i = 0
     for itern, data in pbar:
         result_dict = model(data, training=True)
         loss_dict = model.get_loss(data['targets'].to(device))
@@ -65,6 +66,10 @@ def train_traj_epoch(epoch, model, optimizer, epoch_loss, dataloader, args, reco
 
         recorder.train_traj_batch_update(itern, data, traj_gt.detach().cpu().numpy(), traj_pred.detach().cpu().numpy(),
                                          loss.item(), traj_loss.item())
+        
+        # i += 1
+        # if i == 20:
+        #     break
 
     epoch_loss['loss_traj'].append(np.mean(batch_losses['loss_traj']))
 

@@ -1,3 +1,4 @@
+import os
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -14,8 +15,8 @@ LongTensor = torch.cuda.LongTensor if cuda else torch.LongTensor
 class SgnetFeatureExtractor(nn.Module):
     def __init__(self, args):
         super(SgnetFeatureExtractor, self).__init__()
-        self.embbed_size = args.embed_dim
-        self.box_embed = nn.Sequential(nn.Linear(args.input_dim, self.embbed_size), 
+        self.embbed_size = args.hidden_size
+        self.box_embed = nn.Sequential(nn.Linear(4, self.embbed_size), 
                                         nn.ReLU()) 
     def forward(self, inputs):
         box_input = inputs
@@ -27,13 +28,13 @@ class SgnetFeatureExtractor(nn.Module):
 class SGNetTrajBbox(nn.Module):
     def __init__(self, model_cfg, dataset):
         super(SGNetTrajBbox, self).__init__()
-        self.cvae = BiTraPNP(model_cfg.cvae)
+        self.cvae = BiTraPNP(model_cfg)
         self.hidden_size = model_cfg.hidden_size # GRU hidden size
         self.enc_steps = model_cfg.enc_steps # observation step
         self.dec_steps = model_cfg.dec_steps # prediction step
         self.dataset = dataset
         self.dropout = model_cfg.dropout
-        self.feature_extractor = SgnetFeatureExtractor(model_cfg.feature_extractor)
+        self.feature_extractor = SgnetFeatureExtractor(model_cfg)
         self.pred_dim = model_cfg.pred_dim
         self.K = model_cfg.K
         self.map = False
@@ -219,3 +220,64 @@ class SGNetTrajBbox(nn.Module):
                                                                patience=scheduler_cfg.patience, min_lr=scheduler_cfg.min_lr,
                                                                verbose=True)
         return optimizer, scheduler
+    
+    def load_params_from_file(self, filename, to_cpu=False, pre_trained_path=None):
+        if not os.path.isfile(filename):
+            raise FileNotFoundError
+
+        print('==> Loading parameters from checkpoint %s to %s' % (filename, 'CPU' if to_cpu else 'GPU'))
+        loc_type = torch.device('cpu') if to_cpu else None
+        checkpoint = torch.load(filename, map_location=loc_type)
+        model_state_disk = checkpoint
+        
+        # Modify this section to include any pre-trained weights if needed
+        if pre_trained_path is not None:
+            pretrain_checkpoint = torch.load(pre_trained_path, map_location=loc_type)
+            pretrain_model_state_disk = pretrain_checkpoint
+            model_state_disk.update(pretrain_model_state_disk)
+        
+        version = checkpoint.get("version", None)
+        if version is not None:
+            print('==> Checkpoint trained from version: %s' % version)
+
+        state_dict, update_model_state = self._load_state_dict(model_state_disk, strict=False)
+
+        for key in state_dict:
+            if key not in update_model_state:
+                print('Not updated weight %s: %s' % (key, str(state_dict[key].shape)))
+
+        print('==> Done (loaded %d/%d)' % (len(update_model_state), len(state_dict)))
+
+    def _load_state_dict(self, model_state_disk, *, strict=True):
+        state_dict = self.state_dict()  # local cache of state_dict
+
+        self.layers = []
+        for attr_name, attr_value in self.__dict__.items():
+            if attr_name == '_modules':
+                for module_name in attr_value:
+                    self.layers.append(attr_value[module_name])
+
+        # Update the state_dict based on the model_state_disk
+        update_model_state = {}
+        for key, val in model_state_disk.items():
+            key = key[key.find('.')+1:]
+            if key in state_dict and state_dict[key].shape == val.shape:
+                update_model_state[key] = val
+            else:
+                found = False
+                for layer in self.layers:
+                    if key.startswith(layer[0]):  # Check if the key starts with the layer's name
+                        layer.load_state_dict({key[len(layer[0]) + 1:]: val})
+                        found = True
+                        break
+                if not found:
+                    print(f"Unrecognized key: {key}") 
+
+        # Update the model's state_dict
+        if strict:
+            self.load_state_dict(update_model_state)
+        else:
+            state_dict.update(update_model_state)
+            self.load_state_dict(state_dict)
+
+        return state_dict, update_model_state
