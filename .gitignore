@@ -2,3 +2,10 @@ psi_dataset/*
 .vscode
 ckpts/*
 __pycache__
+*.txt
+*.pkl
+.hypothesis/
+database/*.txt
+database/*.pkl
+test_db_log.txt
+.DS_Store
