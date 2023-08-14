@@ -34,9 +34,12 @@ class SGNetTrajBbox(nn.Module):
         self.dataset = dataset
         self.dropout = model_cfg.dropout
         self.use_speed = model_cfg.get('speed_module', None) 
-        self.feature_extractor = SgnetFeatureExtractor(model_cfg.bbox_module).type(FloatTensor)
+        
         if self.use_speed:
+            self.feature_extractor = SgnetFeatureExtractor(model_cfg.bbox_module).type(FloatTensor)
             self.speed_feature_extractor = SgnetFeatureExtractor(model_cfg.speed_module).type(FloatTensor)
+        else:
+            self.feature_extractor = SgnetFeatureExtractor(model_cfg.feature_extractor)
             
         self.pred_dim = model_cfg.pred_dim
         self.K = model_cfg.K
