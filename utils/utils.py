@@ -80,11 +80,11 @@ def convert_bbox(bboxes, bbox_type):
     return bboxes    
 
 
-def convert_normalize_bboxes(bboxes, normalize, bbox_type, min_bbox, max_bbox):
+def convert_normalize_bboxes(bboxes, normalize, bbox_type2cvt, min_bbox, max_bbox):
     '''input box type is x1y1x2y2 in original resolution'''
     assert isinstance(bboxes, np.ndarray) or isinstance(bboxes, torch.Tensor)
 
-    bboxes = convert_bbox(bboxes, bbox_type)
+    bboxes = convert_bbox(bboxes, bbox_type2cvt)
 
     if normalize == 'zero-one':
         bboxes = (bboxes - min_bbox) / (max_bbox - min_bbox)
@@ -98,11 +98,11 @@ def convert_normalize_bboxes(bboxes, normalize, bbox_type, min_bbox, max_bbox):
     return bboxes
 
 
-def convert_unnormalize_bboxes(bboxes, normalize, bbox_type, min_bbox, max_bbox):
+def convert_unnormalize_bboxes(bboxes, normalize, bbox_type2cvt, min_bbox, max_bbox):
     '''input box type is cxcywh in normalized resolution'''
     assert isinstance(bboxes, np.ndarray) or isinstance(bboxes, torch.Tensor)
 
-    bboxes = convert_bbox(bboxes, bbox_type)
+    bboxes = convert_bbox(bboxes, bbox_type2cvt)
 
     # NOTE Unnormalize bbox
     if normalize == 'zero-one':
