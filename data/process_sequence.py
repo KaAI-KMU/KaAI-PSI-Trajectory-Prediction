@@ -47,7 +47,6 @@ def generate_data_sequence(set_name, database, args):
 
     return data_dict
     
-
 def get_intent(database, video_name, ped_id, args):
     prob_seq = []
     intent_seq = []

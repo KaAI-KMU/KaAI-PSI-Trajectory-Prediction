@@ -2,12 +2,14 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
+from ..model_template import ModelTemplate
+
 cuda = True if torch.cuda.is_available() else False
 device = torch.device("cuda:0" if cuda else "cpu")
 FloatTensor = torch.cuda.FloatTensor if cuda else torch.FloatTensor
 LongTensor = torch.cuda.LongTensor if cuda else torch.LongTensor
 
-class LSTMTrajBbox(nn.Module):
+class LSTMTrajBbox(ModelTemplate):
     def __init__(self, model_cfg, dataset):
         super(LSTMTrajBbox, self).__init__()
 

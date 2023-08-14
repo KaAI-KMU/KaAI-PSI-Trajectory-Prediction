@@ -49,7 +49,7 @@ def get_opts():
                         help='Image shape: PSI(1280, 720).')
     parser.add_argument('--load_image', type=bool, default=False,
                         help='Do not load image to backbone if not necessary')
-    parser.add_argument('--pretrained_path', type=str, default='psi_dataset/pre-trained/best.pth',
+    parser.add_argument('--pretrained_path', type=str, default=None,
                         help='Path of the pre-trained pt file')
     
     # about models
@@ -109,6 +109,7 @@ def get_opts():
         cfg.optimization.epochs = args.epochs
     else:
         args.epochs = cfg.optimization.num_epochs
+    args.speed = True if cfg.model_cfg.speed_module else False
 
     args.observe_length = cfg.model_cfg.observe_length
     args.predict_length = cfg.model_cfg.predict_length

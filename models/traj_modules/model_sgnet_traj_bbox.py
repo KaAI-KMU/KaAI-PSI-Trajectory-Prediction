@@ -4,6 +4,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 from utils.utils import rmse_loss, cvae_multi
+from ..model_template import ModelTemplate
 from .model_bitrap_traj_bbox import BiTraPNP
 
 cuda = True if torch.cuda.is_available() else False
@@ -25,7 +26,7 @@ class SgnetFeatureExtractor(nn.Module):
     
     
 
-class SGNetTrajBbox(nn.Module):
+class SGNetTrajBbox(ModelTemplate):
     def __init__(self, model_cfg, dataset):
         super(SGNetTrajBbox, self).__init__()
         self.cvae = BiTraPNP(model_cfg.cvae)
