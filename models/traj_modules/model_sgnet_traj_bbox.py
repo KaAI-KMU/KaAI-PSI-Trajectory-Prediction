@@ -20,8 +20,8 @@ class SgnetFeatureExtractor(nn.Module):
     def forward(self, inputs):
         box_input = inputs
         embedded_box_input= self.box_embed(box_input)
-
         return embedded_box_input
+    
     
 
 class SGNetTrajBbox(nn.Module):
@@ -34,9 +34,9 @@ class SGNetTrajBbox(nn.Module):
         self.dataset = dataset
         self.dropout = model_cfg.dropout
         self.use_speed = model_cfg.get('speed_module', None) 
-        self.feature_extractor = SgnetFeatureExtractor(model_cfg.bbox_module)
+        self.feature_extractor = SgnetFeatureExtractor(model_cfg.bbox_module).type(FloatTensor)
         if self.use_speed:
-            self.speed_feature_extractor = SgnetFeatureExtractor(model_cfg.speed_module)    
+            self.speed_feature_extractor = SgnetFeatureExtractor(model_cfg.speed_module).type(FloatTensor)
             
         self.pred_dim = model_cfg.pred_dim
         self.K = model_cfg.K
@@ -181,7 +181,7 @@ class SGNetTrajBbox(nn.Module):
         if self.dataset in ['PSI2.0','JAAD','PIE']:
             bbox_input = self.feature_extractor(bboxes)
             if self.use_speed:
-                speed = data['speed'][:, :self.observe_length, :].cuda()
+                speed = data['speed'][:, :self.observe_length, :].to(device).type(FloatTensor)
                 speed_input = self.speed_feature_extractor(speed)
                 traj_input = torch.cat((bbox_input , speed_input), dim=2)
             else:

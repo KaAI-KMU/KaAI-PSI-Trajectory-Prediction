@@ -13,15 +13,17 @@ model_cfg:
                 input_dim: 1
                 embed_dim: 128
         
+
         cvae:
                 input_dim: 4
                 pred_dim: 4
                 latent_dim: 32
-                hidden_size: 512
+                hidden_size: 384
                 nu: 0.0
                 sigma: 1.5
                 latent_dim: 32
                 dec_with_z: True
+        
 
         input_dim: 4
         pred_dim: 4
@@ -45,4 +47,4 @@ lr_scheduler:
         scheduler: ReduceLROnPlateau
         factor: 0.2
         patience: 5
-        min_lr: 0.0000000001 # 1e-10
+        min_lr: 0.0000000001 # 1e-10's=
