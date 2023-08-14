@@ -6,6 +6,7 @@ import cv2
 import PIL
 from PIL import Image
 import copy
+from transformers import BertTokenizer, BertForSequenceClassification, BertConfig, BertModel
 
 from utils import utils
 
@@ -28,11 +29,9 @@ class VideoDataset(torch.utils.data.Dataset):
         assert video_ids[0] == video_ids[-1] # all video_id should be the same
         assert ped_ids[0] == ped_ids[-1]  # all video_id should be the same
         frame_list = self.data['frame'][index][:self.args.observe_length] # return first 15 frames as observed
-
+        description = self.data['description'][index]
         bboxes = self.data['bbox'][index] # return all 60 frames #[:-1] # take first 15 frames as input
-        
-        if self.args.speed:
-            speed = self.data['speed'][index]
+        speed = self.data['speed'][index]
             
         intention_binary = self.data['intention_binary'][index] # all frames intentions are returned
         intention_prob = self.data['intention_prob'][index] # all frames, 3-dimension votes probability
@@ -50,10 +49,13 @@ class VideoDataset(torch.utils.data.Dataset):
         #     images, cropped_images = self.load_images(video_id, frame_list, bboxes)
         # else:
         #     images, cropped_images = [], []
-
+        
         global_featmaps, local_featmaps = self.load_features(video_ids, ped_ids, frame_list)
         reason_features = self.load_reason_features(video_ids, ped_ids, frame_list)
-
+        
+        for _ in range(len(description)):
+            single_description = ''.join([item for sublist in description for item in sublist if item])
+        
         for f in range(len(frame_list)): #(len(bboxes)):
             box = bboxes[f]
             xtl, ytl, xrb, yrb = box
@@ -84,9 +86,10 @@ class VideoDataset(torch.utils.data.Dataset):
             t = torch.stack(t)
             jh = torch.from_numpy(bboxes[:self.args.observe_length]).unsqueeze(dim=1).repeat((1,predict_length,1))
             targets = t - jh
+            # description_features = description_features[]
         else:
-            targets = torch.from_numpy(bboxes[self.args.observe_length:,:])         
-
+            targets = torch.from_numpy(bboxes[self.args.observe_length:,:])     
+            
         data = {
             # 'cropped_images': cropped_images,
             # 'images': images,
@@ -100,23 +103,22 @@ class VideoDataset(torch.utils.data.Dataset):
             'reason_feats': reason_features,
             # 'reason': reason,
             # 'reason_origin': reason_origin,
+            'speed': speed,
             'frames': np.array([int(f) for f in frame_list]),
             'video_id': video_ids[0], #int(video_id[0][0].split('_')[1])
-            'ped_id': ped_ids[0],
+            'ped_id': ped_ids[0], 
             'disagree_score': disagree_score,
-            'targets': targets
+            'targets': targets,
+            'single_description': single_description,
+            # 'description': description,
         }
         
-        
-        if self.args.speed:
-            data['speed'] = speed 
-            
         return data
 
     def __len__(self):
         return len(self.data['frame'])
-
-    ''' All below are util functions '''
+    
+    
     def load_reason_features(self, video_ids, ped_ids, frame_list):
         feat_list = []
         video_name = video_ids[0]
@@ -131,8 +133,8 @@ class VideoDataset(torch.utils.data.Dataset):
 
         feat_list = [] if len(feat_list) < 1 else torch.stack(feat_list)
         return feat_list
-
-
+            
+            
     def load_features(self, video_ids, ped_ids, frame_list):
         global_featmaps = []
         local_featmaps = []

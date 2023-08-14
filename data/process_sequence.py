@@ -23,13 +23,12 @@ def generate_data_sequence(set_name, database, args):
             pids_seq.append([ped] * n)
             video_seq.append([video] * n)
             intents, probs, disgrs, descripts = get_intent(database, video, ped, args)
+            speed = database[video][ped]['cv_annotations']['speed']
             intention_prob.append(probs)
             intention_binary.append(intents)
             disagree_score_seq.append(disgrs)
             description_seq.append(descripts)
-            
-            if args.speed:
-                speed_seq.append(database[video][ped]['cv_annotations']['speed'])
+            speed_seq.append(speed)
 
     data_dict = {
         'frame': frame_seq,
@@ -40,10 +39,8 @@ def generate_data_sequence(set_name, database, args):
         'video_id': video_seq,
         'disagree_score': disagree_score_seq,
         'description': description_seq,
+        'speed': speed_seq
     }
-
-    if args.speed:  # Check if speed information is required
-        data_dict['speed'] = speed_seq
 
     return data_dict
     

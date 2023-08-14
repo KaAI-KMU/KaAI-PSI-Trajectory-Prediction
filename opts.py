@@ -109,7 +109,6 @@ def get_opts():
         cfg.optimization.epochs = args.epochs
     else:
         args.epochs = cfg.optimization.num_epochs
-    args.speed = True if cfg.model_cfg.speed_module else False
 
     args.observe_length = cfg.model_cfg.observe_length
     args.predict_length = cfg.model_cfg.predict_length

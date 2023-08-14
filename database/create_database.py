@@ -57,32 +57,8 @@ def add_ped_case(db, video_name, ped_name, nlp_vid_uid_pairs):
         'frames': None,  # [] list of frame_idx of the target pedestrian appear
         'cv_annotations': {
             'track_id': ped_name,
-            'bbox': []  # [] list of bboxes, each bbox is [xtl, ytl, xbr, ybr]
-        },
-        'nlp_annotations': {
-            # [vid_uid_pair: {'intent': [], 'description': [], 'key_frame': []}]
-        }
-    }
-    for vid_uid in nlp_vid_uid_pairs:
-        db[video_name][ped_name]['nlp_annotations'][vid_uid] = {
-            'intent': [],
-            'description': [],
-            'key_frame': []
-            # 0: not key frame (expanded from key frames with NLP annotations)
-            # 1: key frame (labeled by NLP annotations)
-        }
-      
-        
-def add_ped_case_speed(db, video_name, ped_name, nlp_vid_uid_pairs):
-    if video_name not in db:
-        db[video_name] = {}
-
-    db[video_name][ped_name] = {  # ped_name is 'track_id' in cv-annotation
-        'frames': None,  # [] list of frame_idx of the target pedestrian appear
-        'cv_annotations': {
-            'track_id': ped_name,
-            'bbox': [],
-            'speed': []
+            'bbox': [],  # [] list of bboxes, each bbox is [xtl, ytl, xbr, ybr]
+            'speed': [],
         },
         'nlp_annotations': {
             # [vid_uid_pair: {'intent': [], 'description': [], 'key_frame': []}]
@@ -122,15 +98,9 @@ def init_db(video_list, db_log, args):
             continue
         db[video_name] = {}
         for ped in annotation['pedestrians'].keys():         
-            if args.speed:
-                cog_annotation = annotation['pedestrians'][ped]['cognitive_annotations']
-                nlp_vid_uid_pairs = cog_annotation.keys()
-                add_ped_case_speed(db, video_name, ped, nlp_vid_uid_pairs)
-                
-            else:
-                cog_annotation = annotation['pedestrians'][ped]['cognitive_annotations']
-                nlp_vid_uid_pairs = cog_annotation.keys()
-                add_ped_case(db, video_name, ped, nlp_vid_uid_pairs)
+            cog_annotation = annotation['pedestrians'][ped]['cognitive_annotations']
+            nlp_vid_uid_pairs = cog_annotation.keys()
+            add_ped_case(db, video_name, ped, nlp_vid_uid_pairs)
                         
     return db
 
@@ -213,35 +183,22 @@ def update_db_annotations(db, db_log, args):
             if len(observed_frames) == observed_frames[-1] - observed_frames[0] + 1:  # no missing frames
                 threshold = args.max_track_size # 60
                 if len(observed_frames) > threshold:
-                    
-                    
-                    if args.speed == True:
-                        cv_frame_list = observed_frames
-                        cv_frame_box = observed_bboxes
-                        db[video_name][pedId]['frames'] = cv_frame_list
-                        db[video_name][pedId]['cv_annotations']['bbox'] = cv_frame_box
-                        for name in video_list:
-            
-                            # 속도 값을 저장할 리스트
-                            speed_list = []
+                    cv_frame_list = observed_frames
+                    cv_frame_box = observed_bboxes
+                    db[video_name][pedId]['frames'] = cv_frame_list
+                    db[video_name][pedId]['cv_annotations']['bbox'] = cv_frame_box
+                    for name in video_list:
+                        speed_list = []
 
-                            # frames 내의 각 프레임에 대해 속도 값을 가져와 speed_list에 추가
-                            for frame_number in observed_frames:
-                                frame_key = f'frame_{frame_number}'
-                                frame_data = cv_annotation['frames'][frame_key]
-                                speed = frame_data.get('speed(km/hr)', None)
-                                if speed is not None:
-                                    speed_list.append([float(speed)])  # 수정된 부분
-                                    
+                        for frame_number in observed_frames:
+                            frame_key = f'frame_{frame_number}'
+                            frame_data = cv_annotation['frames'][frame_key]
+                            speed = frame_data.get('speed(km/hr)', None)
+                            if speed is not None:
+                                speed_list.append([float(speed)])  # 수정된 부분
+                                
 
-                        db[video_name][pedId]['cv_annotations']['speed'] = speed_list
-                        
-                    else:
-                        cv_frame_list = observed_frames
-                        cv_frame_box = observed_bboxes
-                        db[video_name][pedId]['frames'] = cv_frame_list
-                        db[video_name][pedId]['cv_annotations']['bbox'] = cv_frame_box
-                        
+                    db[video_name][pedId]['cv_annotations']['speed'] = speed_list
                         
                     get_intent_des(db, video_name, pedId, [*range(len(observed_frames))], cog_annotation)
                 else: # too few frames observed
@@ -260,73 +217,50 @@ def update_db_annotations(db, db_log, args):
 
                     del db[video_name][pedId]
                 elif len(cv_split_inds) == 1:
-                    if args.speed == True:
-                            db[video_name][pedId]['frames'] = cv_frame_list[0]
-                            db[video_name][pedId]['cv_annotations']['bbox'] = cv_frame_box[0]
-                            get_intent_des(db, video_name, pedId, cv_split_inds[0], cog_annotation)
-                            for name in video_list:
-                                json_file_path =os.path.join(dataroot, cv_annotation_folder , video_name,  'cv_annotation.json')
+                    db[video_name][pedId]['frames'] = cv_frame_list[0]
+                    db[video_name][pedId]['cv_annotations']['bbox'] = cv_frame_box[0]
+                    get_intent_des(db, video_name, pedId, cv_split_inds[0], cog_annotation)
+                    for name in video_list:
+                        speed_list = []
 
-                                # JSON 파일 읽기
-                                with open(json_file_path, 'r') as f:
-                                    json_data = json.load(f)
+                        for frame_number in observed_frames:
+                            frame_key = f'frame_{frame_number}'
+                            frame_data = cv_annotation['frames'][frame_key]
+                            speed = frame_data.get('speed(km/hr)', None)
+                            if speed is not None:
+                                speed_list.append([float(speed)])  # 수정된 부분
 
-                                # 속도 값을 저장할 리스트
-                                speed_list = []
-
-                            # frames 내의 각 프레임에 대해 속도 값을 가져와 speed_list에 추가
-                                for frame_number in observed_frames:
-                                    frame_key = f'frame_{frame_number}'
-                                    frame_data = cv_annotation['frames'][frame_key]
-                                    speed = frame_data.get('speed(km/hr)', None)
-                                    if speed is not None:
-                                        speed_list.append([float(speed)])  # 수정된 부분
-
-                            db[video_name][pedId]['cv_annotations']['speed'] = speed_list
-                    else:
-                        db[video_name][pedId]['frames'] = cv_frame_list[0]
-                        db[video_name][pedId]['cv_annotations']['bbox'] = cv_frame_box[0]
-                        get_intent_des(db, video_name, pedId, cv_split_inds[0], cog_annotation)
-                            
+                    db[video_name][pedId]['cv_annotations']['speed'] = speed_list
+                    
                 else:
                     # multiple splits left after removing missing box frames
                     with open(db_log, 'a') as f:
                         f.write(f"{len(cv_frame_list)} splits: , {[len(s) for s in cv_frame_list]} \n")
                     nlp_vid_uid_pairs = db[video_name][pedId]['nlp_annotations'].keys()
                     for i in range(len(cv_frame_list)):
-                        
-                        
-                        if args.speed:
-                            ped_splitId = pedId + '-' + str(i)
-                            add_ped_case(db, video_name, ped_splitId, nlp_vid_uid_pairs)
-                            db[video_name][ped_splitId]['frames'] = cv_frame_list[i]
-                            db[video_name][ped_splitId]['cv_annotations']['bbox'] = cv_frame_box[i]
-                            for name in video_list:
-                                json_file_path =os.path.join(dataroot, cv_annotation_folder , video_name,  'cv_annotation.json')
+                        ped_splitId = pedId + '-' + str(i)
+                        add_ped_case(db, video_name, ped_splitId, nlp_vid_uid_pairs)
+                        db[video_name][ped_splitId]['frames'] = cv_frame_list[i]
+                        db[video_name][ped_splitId]['cv_annotations']['bbox'] = cv_frame_box[i]
+                        for name in video_list:
+                            json_file_path =os.path.join(dataroot, cv_annotation_folder , video_name,  'cv_annotation.json')
 
-                                # JSON 파일 읽기
-                                with open(json_file_path, 'r') as f:
-                                    json_data = json.load(f)
+                            # JSON 파일 읽기
+                            with open(json_file_path, 'r') as f:
+                                json_data = json.load(f)
 
-                                # 속도 값을 저장할 리스트
-                                speed_list = []
+                            # 속도 값을 저장할 리스트
+                            speed_list = []
 
-                                # frames 내의 각 프레임에 대해 속도 값을 가져와 speed_list에 추가
-                                for frame_number in observed_frames:
-                                    frame_key = f'frame_{frame_number}'
-                                    frame_data = cv_annotation['frames'][frame_key]
-                                    speed = frame_data.get('speed(km/hr)', None)
-                                    if speed is not None:
-                                        speed_list.append([float(speed)])  # 수정된 부분
+                            # frames 내의 각 프레임에 대해 속도 값을 가져와 speed_list에 추가
+                            for frame_number in observed_frames:
+                                frame_key = f'frame_{frame_number}'
+                                frame_data = cv_annotation['frames'][frame_key]
+                                speed = frame_data.get('speed(km/hr)', None)
+                                if speed is not None:
+                                    speed_list.append([float(speed)])  # 수정된 부분
 
-                            db[video_name][ped_splitId]['cv_annotations']['speed'] = speed_list
-                            
-                        else:
-                            ped_splitId = pedId + '-' + str(i)
-                            add_ped_case(db, video_name, ped_splitId, nlp_vid_uid_pairs)
-                            db[video_name][ped_splitId]['frames'] = cv_frame_list[i]
-                            db[video_name][ped_splitId]['cv_annotations']['bbox'] = cv_frame_box[i]
-                            
+                        db[video_name][ped_splitId]['cv_annotations']['speed'] = speed_list
                             
                         get_intent_des(db, video_name, ped_splitId, cv_split_inds[i], cog_annotation)
                         if len(db[video_name][ped_splitId]['nlp_annotations'][list(db[video_name][ped_splitId]['nlp_annotations'].keys())[0]]['intent']) == 0:
