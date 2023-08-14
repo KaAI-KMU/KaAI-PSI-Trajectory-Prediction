@@ -16,6 +16,8 @@ class JAADFeatureExtractor(nn.Module):
         embedded_box_input= self.box_embed(box_input)
 
         return embedded_box_input
+    
+
 
 class ETHUCYFeatureExtractor(nn.Module):
 
