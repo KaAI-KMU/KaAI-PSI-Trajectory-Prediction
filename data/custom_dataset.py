@@ -50,7 +50,10 @@ class VideoDataset(torch.utils.data.Dataset):
         
         global_featmaps, local_featmaps = self.load_features(video_ids, ped_ids, frame_list)
         reason_features = self.load_reason_features(video_ids, ped_ids, frame_list)
-        description_features = self.description_to_embeddings(description)
+        
+        for _ in range(len(description)):
+            single_description = ''.join([item for sublist in description for item in sublist if item])
+        
         for f in range(len(frame_list)): #(len(bboxes)):
             box = bboxes[f]
             xtl, ytl, xrb, yrb = box
@@ -84,8 +87,6 @@ class VideoDataset(torch.utils.data.Dataset):
         else:
             targets = torch.from_numpy(bboxes[self.args.observe_length:,:])     
             
-            
-
         data = {
             # 'cropped_images': cropped_images,
             # 'images': images,
@@ -104,8 +105,8 @@ class VideoDataset(torch.utils.data.Dataset):
             'ped_id': ped_ids[0], 
             'disagree_score': disagree_score,
             'targets': targets,
-            'description' : description,
-            'description_features': description_features
+            'single_description': single_description,
+            # 'description': description,
         }
 
         return data
@@ -113,19 +114,6 @@ class VideoDataset(torch.utils.data.Dataset):
     def __len__(self):
         return len(self.data['frame'])
     
-    def description_to_embeddings(self, description):
-        tokenizer = BertTokenizer.from_pretrained('bert-base-uncased')
-        model = BertModel.from_pretrained('bert-base-uncased')
-        
-        # 한 문장으로 합치기
-        for _ in range(len(description)):
-            single_description = ''.join([item for sublist in description for item in sublist if item])
-        
-        inputs = tokenizer(single_description, return_tensors='pt', padding=True, truncation=True)
-        outputs = model(**inputs)
-        embeddings = outputs.last_hidden_state.mean(dim=1) # (1, 768)
-        
-        return embeddings.repeat(len(description), 1) # (60, 768)
     
     def load_reason_features(self, video_ids, ped_ids, frame_list):
         feat_list = []

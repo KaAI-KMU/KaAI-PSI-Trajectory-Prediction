@@ -94,6 +94,7 @@ def predict_intent(model, dataloader, args):
 def validate_traj(epoch, model, dataloader, args, recorder, writer):
     model.eval()
     niters = len(dataloader)
+
     for itern, data in enumerate(tqdm(dataloader, desc='Validation')):
         result_dict = model(data, training=False)
         traj_pred = result_dict['traj_pred']

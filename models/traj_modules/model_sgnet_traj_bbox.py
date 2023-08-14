@@ -4,6 +4,7 @@ import torch.nn.functional as F
 
 from utils.utils import rmse_loss, cvae_multi
 from .model_bitrap_traj_bbox import BiTraPNP
+from ..feature_extractor import *
 
 cuda = True if torch.cuda.is_available() else False
 device = torch.device("cuda:0" if cuda else "cpu")
@@ -11,29 +12,21 @@ FloatTensor = torch.cuda.FloatTensor if cuda else torch.FloatTensor
 LongTensor = torch.cuda.LongTensor if cuda else torch.LongTensor
 
 
-class SgnetFeatureExtractor(nn.Module):
-    def __init__(self, args):
-        super(SgnetFeatureExtractor, self).__init__()
-        self.embbed_size = args.embed_dim
-        self.box_embed = nn.Sequential(nn.Linear(args.input_dim, self.embbed_size), 
-                                        nn.ReLU()) 
-    def forward(self, inputs):
-        box_input = inputs
-        embedded_box_input= self.box_embed(box_input)
 
-        return embedded_box_input
-    
 
 class SGNetTrajBbox(nn.Module):
     def __init__(self, model_cfg, dataset):
         super(SGNetTrajBbox, self).__init__()
+        self.use_desc = model_cfg.get('description_module', None) is not None
         self.cvae = BiTraPNP(model_cfg.cvae)
         self.hidden_size = model_cfg.hidden_size # GRU hidden size
         self.enc_steps = model_cfg.enc_steps # observation step
         self.dec_steps = model_cfg.dec_steps # prediction step
         self.dataset = dataset
         self.dropout = model_cfg.dropout
-        self.feature_extractor = SgnetFeatureExtractor(model_cfg.feature_extractor)
+        self.bbox_module = SgnetFeatureExtractor(model_cfg.bbox_module)
+        self.desc_module = DescFeatureExtractor(model_cfg.description_module) if self.use_desc else None
+        self.desc_module.freeze_params()
         self.pred_dim = model_cfg.pred_dim
         self.K = model_cfg.K
         self.map = False
@@ -175,10 +168,13 @@ class SGNetTrajBbox(nn.Module):
         if torch.is_tensor(0):
             start_index = start_index[0].item()
         if self.dataset in ['PSI2.0','JAAD','PIE']:
-            traj_input = self.feature_extractor(inputs)
+            traj_input = self.bbox_module(inputs)
+            if self.use_desc:
+                desc_input = self.desc_module(data['single_description'], frame_len=inputs.shape[1])
+                traj_input = torch.concatenate([traj_input, desc_input], dim=-1)
             all_goal_traj, all_cvae_dec_traj, KLD, total_probabilities = self.encoder(inputs, targets, traj_input)
         elif self.dataset in ['ETH', 'HOTEL','UNIV','ZARA1', 'ZARA2']:
-            traj_input_temp = self.feature_extractor(inputs[:,start_index:,:])
+            traj_input_temp = self.bbox_module(inputs[:,start_index:,:])
             traj_input = traj_input_temp.new_zeros((inputs.size(0), inputs.size(1), traj_input_temp.size(-1)))
             traj_input[:,start_index:,:] = traj_input_temp
             all_goal_traj, all_cvae_dec_traj, KLD, total_probabilities = self.encoder(inputs, targets, traj_input, None, start_index)

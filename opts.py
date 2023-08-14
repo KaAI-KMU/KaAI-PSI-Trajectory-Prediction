@@ -63,7 +63,7 @@ def get_opts():
                         help='Total number of training epochs')
     parser.add_argument('--batch_size', type=int, default=None,
                         help='Batch size of dataloader')
-    parser.add_argument('--num_workers', type=int, default=0,
+    parser.add_argument('--num_workers', type=int, default=4,
                         help='Number of workers of dataloader')
     parser.add_argument('--resume', type=str, default='',
                         help='ckpt path+filename to be resumed.')

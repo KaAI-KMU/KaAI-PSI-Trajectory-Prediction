@@ -1,32 +1,39 @@
 Initialize train database 
-04Aug2023-11h15m18s
+09Aug2023-12h28m17s
 missing frames bbox noticed! , video_0005, track_1, 170, frames observed from , 217 
 2 splits: , [61, 70] 
-missing frames bbox noticed! , video_0005, track_14, 221, frames observed from , 268 
-missing frames bbox noticed! , video_0005, track_55, 246, frames observed from , 265 
-missing frames bbox noticed! , video_0005, track_0, 162, frames observed from , 224 
-missing frames bbox noticed! , video_0005, track_2, 146, frames observed from , 225 
-missing frames bbox noticed! , video_0005, track_3, 197, frames observed from , 219 
-2 splits: , [64, 115] 
+missing frames bbox noticed! , video_0005, track_14, 257, frames observed from , 324 
+2 splits: , [104, 74] 
+missing frames bbox noticed! , video_0005, track_55, 289, frames observed from , 308 
+missing frames bbox noticed! , video_0005, track_0, 195, frames observed from , 292 
+missing frames bbox noticed! , video_0005, track_2, 179, frames observed from , 258 
+2 splits: , [65, 71] 
+missing frames bbox noticed! , video_0005, track_3, 235, frames observed from , 257 
+2 splits: , [64, 153] 
 missing frames bbox noticed! , video_0005, track_5, 94, frames observed from , 157 
 video_0005, track_5, After removing missing frames, no split left! 
+missing frames bbox noticed! , video_0007, track_1, 148, frames observed from , 154 
 missing frames bbox noticed! , video_0010, track_6, 90, frames observed from , 110 
 video_0010, track_6, After removing missing frames, no split left! 
-missing frames bbox noticed! , video_0013, track_59, 117, frames observed from , 124 
-missing frames bbox noticed! , video_0013, track_60, 106, frames observed from , 113 
+missing frames bbox noticed! , video_0013, track_59, 354, frames observed from , 361 
+2 splits: , [87, 266] 
+missing frames bbox noticed! , video_0013, track_60, 164, frames observed from , 180 
+2 splits: , [82, 80] 
 missing frames bbox noticed! , video_0018, track_77, 114, frames observed from , 116 
-missing frames bbox noticed! , video_0023, track_69, 261, frames observed from , 291 
-2 splits: , [101, 159] 
+missing frames bbox noticed! , video_0023, track_69, 280, frames observed from , 310 
+2 splits: , [101, 178] 
 missing frames bbox noticed! , video_0028, track_37, 126, frames observed from , 192 
-missing frames bbox noticed! , video_0035, track_49, 290, frames observed from , 295 
-2 splits: , [75, 214] 
+missing frames bbox noticed! , video_0035, track_49, 311, frames observed from , 316 
+2 splits: , [75, 235] 
+missing frames bbox noticed! , video_0035, track_0, 275, frames observed from , 311 
+2 splits: , [167, 74] 
 missing frames bbox noticed! , video_0037, track_7, 113, frames observed from , 200 
-missing frames bbox noticed! , video_0043, track_94, 280, frames observed from , 299 
-3 splits: , [102, 73, 103] 
+missing frames bbox noticed! , video_0043, track_94, 384, frames observed from , 405 
+3 splits: , [102, 73, 170] 
 missing frames bbox noticed! , video_0044, track_27, 136, frames observed from , 147 
 missing frames bbox noticed! , video_0050, track_57, 231, frames observed from , 233 
-missing frames bbox noticed! , video_0066, track_77, 157, frames observed from , 185 
-2 splits: , [82, 74] 
+missing frames bbox noticed! , video_0066, track_77, 172, frames observed from , 200 
+2 splits: , [82, 89] 
 Single ped occurs too short. video_0070, track_25, 60 
 !!!!! Video, video_0070, has no valid ped sequence! Remove this video! 
 Single ped occurs too short. video_0072, track_44, 22 
@@ -41,3 +48,24 @@ missing frames bbox noticed! , video_0109, track_7, 269, frames observed from , 
 2 splits: , [192, 76] 
 missing frames bbox noticed! , video_0109, track_8, 272, frames observed from , 301 
 2 splits: , [132, 71] 
+missing frames bbox noticed! , video_0112, track_13, 244, frames observed from , 255 
+missing frames bbox noticed! , video_0112, track_14, 236, frames observed from , 247 
+2 splits: , [66, 169] 
+missing frames bbox noticed! , video_0113, track_82, 443, frames observed from , 451 
+2 splits: , [156, 286] 
+missing frames bbox noticed! , video_0114, track_7, 296, frames observed from , 318 
+2 splits: , [140, 125] 
+missing frames bbox noticed! , video_0114, track_8, 259, frames observed from , 264 
+2 splits: , [163, 95] 
+missing frames bbox noticed! , video_0119, track_9, 429, frames observed from , 437 
+2 splits: , [62, 366] 
+missing frames bbox noticed! , video_0120, track_14, 185, frames observed from , 206 
+missing frames bbox noticed! , video_0120, track_92, 236, frames observed from , 242 
+2 splits: , [146, 89] 
+missing frames bbox noticed! , video_0121, track_32, 334, frames observed from , 357 
+2 splits: , [70, 261] 
+missing frames bbox noticed! , video_0122, track_1, 364, frames observed from , 396 
+2 splits: , [117, 170] 
+missing frames bbox noticed! , video_0123, track_31, 403, frames observed from , 426 
+missing frames bbox noticed! , video_0125, track_43, 359, frames observed from , 367 
+2 splits: , [167, 191] 
