@@ -11,9 +11,14 @@ class ModelTemplate(nn.Module):
     
     def get_loss(self, targets):
         raise NotImplementedError
-    
+        
     def build_optimizer(self, optim_cfg, scheduler_cfg):
-        raise NotImplementedError
+        optimizer = torch.optim.Adam(self.parameters(), lr=optim_cfg.lr, weight_decay=optim_cfg.weight_decay)
+        # scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, factor=scheduler_cfg.factor,
+        #                                                        patience=scheduler_cfg.patience, min_lr=scheduler_cfg.min_lr,
+        #                                                        verbose=True)
+        scheduler = torch.optim.lr_scheduler.ExponentialLR(optimizer, gamma=scheduler_cfg.gamma)
+        return optimizer, scheduler    
         
     def load_params_from_file(self, filename, to_cpu=False, pre_trained_path=None):
         if not os.path.isfile(filename):

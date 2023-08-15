@@ -219,11 +219,3 @@ class SGNetTrajBbox(ModelTemplate):
 
         return loss_dict
         
-        
-    def build_optimizer(self, optim_cfg, scheduler_cfg):
-        optimizer = torch.optim.Adam(self.parameters(), lr=optim_cfg.lr, weight_decay=optim_cfg.weight_decay)
-        # scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, factor=scheduler_cfg.factor,
-        #                                                        patience=scheduler_cfg.patience, min_lr=scheduler_cfg.min_lr,
-        #                                                        verbose=True)
-        scheduler = torch.optim.lr_scheduler.ExponentialLR(optimizer, gamma=scheduler_cfg.gamma)
-        return optimizer, scheduler
