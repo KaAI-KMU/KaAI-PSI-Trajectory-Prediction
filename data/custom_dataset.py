@@ -72,11 +72,13 @@ class VideoDataset(torch.utils.data.Dataset):
             min_bbox=np.array(self.args.min_bbox),
             max_bbox=np.array(self.args.max_bbox)
         )
-        if self.args.traj_model:
-            bboxes = bboxes - bboxes[:1, :] 
-            # bboxes = bboxes - bboxes[:1, :] # relative trajectory
-        
+
+        input_bboxes = bboxes.copy()
+        if self.args.relative_bbox: # False in default
+            input_bboxes = input_bboxes - input_bboxes[:1, :]
+
         if self.args.model_name == 'SGNetTrajBbox':
+            bboxes = bboxes - bboxes[:1, :]
             t = []
             predict_length = bboxes.shape[0] - self.args.observe_length
             for i in range(self.args.observe_length):
@@ -97,7 +99,7 @@ class VideoDataset(torch.utils.data.Dataset):
             'local_featmaps': local_featmaps,
             'global_featmaps': global_featmaps,
             'original_bboxes': original_bboxes, # bboxes before normalization
-            'bboxes': bboxes,
+            'bboxes': input_bboxes,
             # 'intention_onehot': intention_onehot,
             'intention_binary': intention_binary,
             'intention_prob': intention_prob,

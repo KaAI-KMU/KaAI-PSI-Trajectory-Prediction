@@ -98,6 +98,7 @@ def validate_traj(epoch, model, dataloader, args, recorder, writer):
         result_dict = model(data, training=False)
         traj_pred = result_dict['traj_pred']
         traj_gt = data['bboxes'][:, args.observe_length: , :].type(FloatTensor)
+        traj_gt = traj_gt - traj_gt[:, :1, :].type(FloatTensor)
         bs, ts, _ = traj_gt.shape
         # if args.normalize_bbox == 'subtract_first_frame':
         #     traj_pred = traj_pred + data['bboxes'][:, :1, :].type(FloatTensor)
