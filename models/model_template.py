@@ -41,7 +41,7 @@ class ModelTemplate(nn.Module):
                 print('Not updated weight %s: %s' % (key, str(state_dict[key].shape)))
 
         print('==> Done (loaded %d/%d)' % (len(update_model_state), len(state_dict)))
-
+        
     def _load_state_dict(self, model_state_disk, *, strict=True):
         state_dict = self.state_dict()  # local cache of state_dict
 
@@ -55,17 +55,12 @@ class ModelTemplate(nn.Module):
         update_model_state = {}
         for key, val in model_state_disk.items():
             key = key[key.find('.')+1:]
+            if 'feature_extractor' in key: # feature_extractor is renamed to bbox_module
+                key = key.replace('feature_extractor', 'bbox_module')
             if key in state_dict and state_dict[key].shape == val.shape:
                 update_model_state[key] = val
             else:
-                found = False
-                for layer in self.layers:
-                    if key.startswith(layer[0]):  # Check if the key starts with the layer's name
-                        layer.load_state_dict({key[len(layer[0]) + 1:]: val})
-                        found = True
-                        break
-                if not found:
-                    print(f"Unrecognized key: {key}") 
+                print(f"Unrecognized key: {key}") 
 
         # Update the model's state_dict
         if strict:

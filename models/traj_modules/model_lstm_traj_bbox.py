@@ -118,18 +118,3 @@ class LSTMTrajBbox(ModelTemplate):
         scheduler = torch.optim.lr_scheduler.ExponentialLR(optimizer, gamma=scheduler_cfg.gamma)
 
         return optimizer, scheduler
-
-    def lr_scheduler(self, optimizer, cur_epoch, args, gamma=10, power=0.75):
-        decay = (1 + gamma * cur_epoch / args.epochs) ** (-power)
-        for param_group in optimizer.param_groups:
-            param_group['lr'] = param_group['lr0'] * decay
-            param_group['weight_decay'] = 1e-3
-            param_group['momentum'] = 0.9
-            param_group['nesterov'] = True
-        return
-
-
-    def _reset_parameters(self):
-        # Original Transformer initialization, see PyTorch documentation
-        nn.init.xavier_uniform_(self.fc.weight)
-        self.fc.bias.data.fill_(0)
