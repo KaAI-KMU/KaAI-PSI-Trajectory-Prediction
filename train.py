@@ -24,7 +24,6 @@ def train_traj(model, optimizer, scheduler, train_loader, val_loader, args, reco
         recorder.train_epoch_reset(epoch, niters)
         epoch_loss = train_traj_epoch(epoch, model, optimizer, epoch_loss, train_loader, args, recorder, writer)
         total_loss = epoch_loss['loss_intent'] + epoch_loss['loss_traj']
-        scheduler.step(sum(total_loss))
 
         if epoch % args.val_freq == 0:
             niters = len(val_loader)
@@ -35,6 +34,7 @@ def train_traj(model, optimizer, scheduler, train_loader, val_loader, args, reco
                 print(f"New best validation score ({val_score}), saving model...")
                 best_val_score = val_score
                 torch.save(model.state_dict(), args.checkpoint_path + f'/best.pth')
+        scheduler.step()
 
         torch.save(model.state_dict(), args.checkpoint_path + f'/latest.pth')
        
