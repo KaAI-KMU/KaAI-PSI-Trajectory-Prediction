@@ -91,17 +91,20 @@ def predict_intent(model, dataloader, args):
         json.dump(dt, f)
 
 
-def validate_traj(epoch, model, dataloader, args, recorder, writer):
+def validate_traj(model, dataloader, args, recorder, writer):
+    total_val_loss = 0
     model.eval()
     niters = len(dataloader)
     for itern, data in enumerate(tqdm(dataloader, desc='Validation')):
-        result_dict = model(data, training=False)
+        with torch.no_grad():
+            result_dict = model(data, training=False)
         traj_pred = result_dict['traj_pred']
         traj_gt = data['bboxes'][:, args.observe_length: , :].type(FloatTensor)
         traj_gt = traj_gt - traj_gt[:, :1, :].type(FloatTensor)
-        bs, ts, _ = traj_gt.shape
-        # if args.normalize_bbox == 'subtract_first_frame':
-        #     traj_pred = traj_pred + data['bboxes'][:, :1, :].type(FloatTensor)
+
+        loss_dict = model.get_loss(data['targets'].to(device))
+        traj_loss = loss_dict['traj_loss']
+        total_val_loss += traj_loss * args.batch_size
         
         min_bbox = torch.tensor(args.min_bbox).type(FloatTensor).to(device)
         max_bbox = torch.tensor(args.max_bbox).type(FloatTensor).to(device)
@@ -123,9 +126,12 @@ def validate_traj(epoch, model, dataloader, args, recorder, writer):
         )
 
         recorder.eval_traj_batch_update(itern, data, traj_gt.detach().cpu().numpy(), traj_pred.detach().cpu().numpy())
+        break
 
+    val_loss = total_val_loss / len(dataloader)
     score = recorder.eval_traj_epoch_calculate(writer)
-    return recorder, score
+
+    return recorder, score, val_loss
 
 
 def predict_traj(model, dataloader, args, dset='test'):

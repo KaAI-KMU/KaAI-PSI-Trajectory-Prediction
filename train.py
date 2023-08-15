@@ -23,18 +23,20 @@ def train_traj(model, optimizer, scheduler, train_loader, val_loader, args, reco
         niters = len(train_loader)
         recorder.train_epoch_reset(epoch, niters)
         epoch_loss = train_traj_epoch(epoch, model, optimizer, epoch_loss, train_loader, args, recorder, writer)
-        total_loss = epoch_loss['loss_intent'] + epoch_loss['loss_traj']
 
         if epoch % args.val_freq == 0:
             niters = len(val_loader)
             recorder.eval_epoch_reset(epoch, niters)
-            _, val_score = validate_traj(epoch, model, val_loader, args, recorder, writer) #backbone_model) 
-
+            _, val_score, val_loss = validate_traj(model, val_loader, args, recorder, writer) #backbone_model) 
             if val_score < best_val_score:
                 print(f"New best validation score ({val_score}), saving model...")
                 best_val_score = val_score
                 torch.save(model.state_dict(), args.checkpoint_path + f'/best.pth')
-        scheduler.step()
+
+        if isinstance(scheduler, torch.optim.lr_scheduler.ReduceLROnPlateau):
+            scheduler.step(val_loss)
+        elif isinstance(scheduler, torch.optim.lr_scheduler.ExponentialLR):
+            scheduler.step()
 
         torch.save(model.state_dict(), args.checkpoint_path + f'/latest.pth')
        
@@ -66,6 +68,7 @@ def train_traj_epoch(epoch, model, optimizer, epoch_loss, dataloader, args, reco
 
         recorder.train_traj_batch_update(itern, data, traj_gt.detach().cpu().numpy(), traj_pred.detach().cpu().numpy(),
                                          loss.item(), traj_loss.item())
+        break
         
 
     epoch_loss['loss_traj'].append(np.mean(batch_losses['loss_traj']))
