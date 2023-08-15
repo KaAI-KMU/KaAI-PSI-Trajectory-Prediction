@@ -9,3 +9,5 @@ database/*.txt
 database/*.pkl
 test_db_log.txt
 .DS_Store
+*.pt
+*.pth
