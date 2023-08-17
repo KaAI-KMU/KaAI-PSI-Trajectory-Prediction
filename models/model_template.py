@@ -14,13 +14,17 @@ class ModelTemplate(nn.Module):
         
     def build_optimizer(self, optim_cfg, scheduler_cfg):
         optimizer = torch.optim.Adam(self.parameters(), lr=optim_cfg.lr, weight_decay=optim_cfg.weight_decay)
-        # scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, factor=scheduler_cfg.factor,
-        #                                                        patience=scheduler_cfg.patience, min_lr=scheduler_cfg.min_lr,
-        #                                                        verbose=True)
-        scheduler = torch.optim.lr_scheduler.ExponentialLR(optimizer, gamma=scheduler_cfg.gamma)
+        if scheduler_cfg.scheduler == 'ReduceLROnPlateau':
+            scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, factor=scheduler_cfg.factor,
+                                                                   patience=scheduler_cfg.patience, min_lr=scheduler_cfg.min_lr,
+                                                                   verbose=True)
+        elif scheduler_cfg.scheduler == 'ExponentialLR':
+            scheduler = torch.optim.lr_scheduler.ExponentialLR(optimizer, gamma=scheduler_cfg.gamma)
+        else:
+            raise NotImplementedError
         return optimizer, scheduler    
         
-    def load_params_from_file(self, filename, to_cpu=False, pre_trained_path=None):
+    def load_params_from_file(self, filename, to_cpu=False):
         if not os.path.isfile(filename):
             raise FileNotFoundError
 
@@ -30,10 +34,9 @@ class ModelTemplate(nn.Module):
         model_state_disk = checkpoint
         
         # Modify this section to include any pre-trained weights if needed
-        if pre_trained_path is not None:
-            pretrain_checkpoint = torch.load(pre_trained_path, map_location=loc_type)
-            pretrain_model_state_disk = pretrain_checkpoint
-            model_state_disk.update(pretrain_model_state_disk)
+        pretrain_checkpoint = torch.load(filename, map_location=loc_type)
+        pretrain_model_state_disk = pretrain_checkpoint
+        model_state_disk.update(pretrain_model_state_disk)
         
         version = checkpoint.get("version", None)
         if version is not None:
@@ -59,7 +62,7 @@ class ModelTemplate(nn.Module):
         # Update the state_dict based on the model_state_disk
         update_model_state = {}
         for key, val in model_state_disk.items():
-            key = key[key.find('.')+1:]
+            # key = key[key.find('.')+1:] # TODO: have to be modified
             if 'feature_extractor' in key: # feature_extractor is renamed to bbox_module
                 key = key.replace('feature_extractor', 'bbox_module')
             if key in state_dict and state_dict[key].shape == val.shape:
