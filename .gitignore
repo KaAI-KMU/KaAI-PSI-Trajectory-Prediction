@@ -11,3 +11,4 @@ test_db_log.txt
 .DS_Store
 *.pt
 *.pth
+*.json
