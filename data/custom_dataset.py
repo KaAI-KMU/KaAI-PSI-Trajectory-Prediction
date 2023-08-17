@@ -20,7 +20,7 @@ class VideoDataset(torch.utils.data.Dataset):
         self.args = args
         self.stage = stage
         self.set_transform()
-        self.images_path = os.path.join(args.dataset_root_path, 'frames')
+        self.flow_path = os.path.join(args.dataset_root_path, 'optical_flow')
         print(self.data.keys())
 
     def __getitem__(self, index):
@@ -74,6 +74,7 @@ class VideoDataset(torch.utils.data.Dataset):
         )
 
         input_bboxes = bboxes.copy()
+        optical_features = self.load_optical_flow(video_ids, frame_list, bboxes)
         if self.args.relative_bbox: # False in default
             input_bboxes = input_bboxes - input_bboxes[:1, :]
 
@@ -89,6 +90,7 @@ class VideoDataset(torch.utils.data.Dataset):
             t = torch.stack(t)
             jh = torch.from_numpy(bboxes[:self.args.observe_length]).unsqueeze(dim=1).repeat((1,predict_length,1))
             targets = t - jh
+            optical_features = optical_features[:self.args.observe_length]
             # description_features = description_features[]
         else:
             targets = torch.from_numpy(bboxes[self.args.observe_length:,:])     
@@ -113,6 +115,7 @@ class VideoDataset(torch.utils.data.Dataset):
             'disagree_score': disagree_score,
             'targets': targets,
             'single_description': single_description,
+            'optical_features': optical_features
             # 'description': description,
         }
         
@@ -120,6 +123,53 @@ class VideoDataset(torch.utils.data.Dataset):
 
     def __len__(self):
         return len(self.data['frame'])
+    
+    def read_flo_file(self, file_path):
+        with open(file_path, 'rb') as f:
+            magic = np.fromfile(f, np.float32, count=1)[0]
+            if magic != 202021.25:
+                raise ValueError("Invalid .flo file format")
+
+            width = np.fromfile(f, np.int32, count=1)[0]
+            height = np.fromfile(f, np.int32, count=1)[0]
+
+            data = np.fromfile(f, np.float32, count=2 * width * height)
+            flo_array = np.reshape(data, (height, width, 2))
+
+        return flo_array
+    
+    def load_optical_flow(self, video_ids, frame_list, bboxes, normalized=True, cxcywh=True):
+        center_flows = []
+        video_name = video_ids[0]
+
+        for i in range(len(frame_list)):
+            frame_id = frame_list[i]
+            bbox = bboxes[i]
+            # load original image
+            # print(video_id, frame_list, video_name, frame_id, bbox)
+            # 첫 번째 프레임 예외처리
+            if i == 0:
+                center_flows.append([0.0, 0.0])
+                continue
+            flow_path = os.path.join(self.flow_path, video_name, f"{str(frame_id).zfill(6)}.flo")
+            # print(img_path)
+            scene_flow = self.read_flo_file(flow_path) # numpy load로 변경
+            if normalized:
+                if cxcywh:
+                    cx, cy, _, _ = bbox
+                    cx, cy = int(cx * scene_flow.shape[1]), int(cy * scene_flow.shape[0])
+                    flow = scene_flow[cy,cx]
+                else:
+                    raise NotImplementedError
+                
+            else:
+                raise NotImplementedError
+
+            center_flows.append(flow)
+
+        #return torch.stack(center_flows) # Time x Channel x H x W
+        return torch.stack([torch.tensor(flow) for flow in center_flows])
+        #return torch.tensor(center_flows)
     
     
     def load_reason_features(self, video_ids, ped_ids, frame_list):
