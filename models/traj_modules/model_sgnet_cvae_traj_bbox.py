@@ -3,7 +3,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from utils.utils import rmse_loss, cvae_multi, euclidean_dist
+from utils.utils import rmse_loss, cvae_multi
 from ..model_template import ModelTemplate
 from .model_bitrap_traj_bbox import BiTraPNP
 from ..feature_extractor import *
@@ -14,9 +14,9 @@ FloatTensor = torch.cuda.FloatTensor if cuda else torch.FloatTensor
 LongTensor = torch.cuda.LongTensor if cuda else torch.LongTensor
 
 
-class SGNetCVAETrajBbox(ModelTemplate):
+class SGNetTrajBbox(ModelTemplate):
     def __init__(self, model_cfg, dataset):
-        super(SGNetCVAETrajBbox, self).__init__()
+        super(SGNetTrajBbox, self).__init__()
         self.cvae = BiTraPNP(model_cfg.cvae)
         self.hidden_size = model_cfg.hidden_size # GRU hidden size
         self.enc_steps = model_cfg.enc_steps # observation step
@@ -39,8 +39,6 @@ class SGNetCVAETrajBbox(ModelTemplate):
             self.regressor = nn.Sequential(nn.Linear(self.hidden_size, 
                                                      self.pred_dim),
                                                      nn.Tanh())
-            self.ed_estimator = nn.Sequential(nn.Linear(self.hidden_size,
-                                                        1))
             self.flow_enc_cell = nn.GRUCell(self.hidden_size*2, self.hidden_size)
         elif self.dataset in ['ETH', 'HOTEL','UNIV','ZARA1', 'ZARA2']:
             self.pred_dim = 2
@@ -87,7 +85,6 @@ class SGNetCVAETrajBbox(ModelTemplate):
         self.dec_cell = nn.GRUCell(self.hidden_size + self.hidden_size//4, self.hidden_size)
 
         self.criterion = rmse_loss().to(device)
-        self.criterion_ed = nn.CrossEntropyLoss().to(device)
         self.observe_length = model_cfg.observe_length
         self.forward_ret_dict = {}
     
@@ -119,7 +116,6 @@ class SGNetCVAETrajBbox(ModelTemplate):
         K = dec_hidden.shape[1]
         dec_hidden = dec_hidden.view(-1, dec_hidden.shape[-1])
         dec_traj = dec_hidden.new_zeros(batch_size, self.dec_steps, K, self.pred_dim)
-        dec_ed_est = dec_hidden.new_zeros(batch_size, self.dec_steps, K)
         for dec_step in range(self.dec_steps):
             # incremental goal for each time step
             goal_dec_input = dec_hidden.new_zeros(batch_size, self.dec_steps, self.hidden_size//4)
@@ -136,16 +132,12 @@ class SGNetCVAETrajBbox(ModelTemplate):
             batch_traj = self.regressor(dec_hidden)
             batch_traj = batch_traj.view(-1, K, batch_traj.shape[-1])
             dec_traj[:,dec_step,:,:] = batch_traj
-            # regress dec conf for loss
-            batch_ed_est = self.ed_estimator(dec_hidden).view(-1, K)
-            dec_ed_est[:,dec_step,:] = batch_ed_est
-        return dec_traj, dec_ed_est
+        return dec_traj
 
     def encoder(self, raw_inputs, raw_targets, traj_input, flow_input=None, start_index = 0):
         # initial output tensor
         all_goal_traj = traj_input.new_zeros(traj_input.size(0), self.enc_steps, self.dec_steps, self.pred_dim)
         all_cvae_dec_traj = traj_input.new_zeros(traj_input.size(0), self.enc_steps, self.dec_steps, self.K, self.pred_dim)
-        total_ed_est = traj_input.new_zeros(traj_input.size(0), self.enc_steps, self.dec_steps, self.K)
         # initial encoder goal with zeros
         goal_for_enc = traj_input.new_zeros((traj_input.size(0), self.hidden_size//4))
         # initial encoder hidden with zeros
@@ -169,46 +161,33 @@ class SGNetCVAETrajBbox(ModelTemplate):
             if self.map:
                 map_input = flow_input
                 cvae_dec_hidden = (cvae_dec_hidden + map_input.unsqueeze(1))/2
-            cvae_dec_traj_single, ed_est_single = self.cvae_decoder(cvae_dec_hidden, goal_for_dec)
-            all_cvae_dec_traj[:,enc_step,:,:,:] = cvae_dec_traj_single
-            total_ed_est[:,enc_step,:,:] = ed_est_single
-        return all_goal_traj, all_cvae_dec_traj, total_KLD, total_ed_est
+            all_cvae_dec_traj[:,enc_step,:,:,:] = self.cvae_decoder(cvae_dec_hidden, goal_for_dec)
+        return all_goal_traj, all_cvae_dec_traj, total_KLD, total_probabilities
             
     def forward(self, data, training=True):
         bboxes = data['bboxes'][:,:self.observe_length,:].to(device).type(FloatTensor)
         targets = data['targets'].to(device).type(FloatTensor)
         self.training = training
-        if torch.is_tensor(0):
-            start_index = start_index[0].item()
-        if self.dataset in ['PSI2.0','JAAD','PIE']:
-            input_list = []
-            bbox_input = self.bbox_module(bboxes)
-            input_list.append(bbox_input)
-            if self.use_speed:
-                speed = data['speed'][:, :self.observe_length, :].to(device).type(FloatTensor)
-                speed_input = self.speed_module(speed)
-                input_list.append(speed_input)
-            if self.use_desc:
-                desc = data['single_description']
-                desc_input = self.desc_module(desc, frame_len=bbox_input.shape[1])
-                input_list.append(desc_input)
-            traj_input = torch.cat(input_list, dim=-1)
-            all_goal_traj, all_cvae_dec_traj, KLD, total_ed_est = self.encoder(bboxes, targets, traj_input)
-        elif self.dataset in ['ETH', 'HOTEL','UNIV','ZARA1', 'ZARA2']:
-            traj_input_temp = self.bbox_module(bboxes[:,start_index:,:])
-            traj_input = traj_input_temp.new_zeros((bboxes.size(0), bboxes.size(1), traj_input_temp.size(-1)))
-            traj_input[:,start_index:,:] = traj_input_temp
-            all_goal_traj, all_cvae_dec_traj, KLD, total_ed_est = self.encoder(bboxes, targets, traj_input, None, start_index)
+
+        input_list = []
+        bbox_input = self.bbox_module(bboxes)
+        input_list.append(bbox_input)
+        if self.use_speed:
+            speed = data['speed'][:, :self.observe_length, :].to(device).type(FloatTensor)
+            speed_input = self.speed_module(speed)
+            input_list.append(speed_input)
+        if self.use_desc:
+            desc = data['single_description']
+            desc_input = self.desc_module(desc, frame_len=bbox_input.shape[1])
+            input_list.append(desc_input)
+        traj_input = torch.cat(input_list, dim=-1)
+        all_goal_traj, all_cvae_dec_traj, KLD, total_probabilities = self.encoder(bboxes, targets, traj_input)
         
         self.forward_ret_dict['all_goal_traj'] = all_goal_traj
-        self.forward_ret_dict['all_cvae_dec_traj'] = all_cvae_dec_traj # (bs, observe_length, predict_length, K, 4)
+        self.forward_ret_dict['all_cvae_dec_traj'] = all_cvae_dec_traj
         self.forward_ret_dict['KLD'] = KLD
-        self.forward_ret_dict['total_ed_est'] = total_ed_est
-
-        best_indices = torch.argmax(-total_ed_est, dim=-1).to(device)[:,-1,:] # (bs, K)
-        bs, pl = best_indices.shape
-        traj_pred = all_cvae_dec_traj[torch.arange(bs)[:, None], -1, torch.arange(pl)[None, :], best_indices, :].squeeze()
-        self.forward_ret_dict['traj_pred'] = traj_pred
+        self.forward_ret_dict['total_probabilities'] = total_probabilities
+        self.forward_ret_dict['traj_pred'] = all_cvae_dec_traj[:,-1,:,-1,:] # K=1
 
         return self.forward_ret_dict
     
@@ -216,24 +195,19 @@ class SGNetCVAETrajBbox(ModelTemplate):
         all_goal_traj = self.forward_ret_dict['all_goal_traj']
         all_cvae_dec_traj = self.forward_ret_dict['all_cvae_dec_traj']
         KLD = self.forward_ret_dict['KLD']
-        total_ed_est = self.forward_ret_dict['total_ed_est']
 
         cvae_pred = all_cvae_dec_traj
         traj_pred = all_goal_traj
         kld_loss = KLD.mean()
         cvae_loss = cvae_multi(cvae_pred, targets)
         goal_loss = self.criterion(traj_pred, targets)
-        total_ed = euclidean_dist(all_cvae_dec_traj, targets.unsqueeze(3).repeat(1,1,1,self.K,1))
-        ed_loss = self.criterion_ed(total_ed_est, total_ed)
-
-        traj_loss = kld_loss + cvae_loss + goal_loss + ed_loss
+        traj_loss = kld_loss + cvae_loss + goal_loss
 
         loss_dict = {
             'traj_loss': traj_loss,
             'kld_loss': kld_loss,
             'cvae_loss': cvae_loss,
             'goal_loss': goal_loss,
-            'ed_loss': ed_loss,
         }
 
         return loss_dict
