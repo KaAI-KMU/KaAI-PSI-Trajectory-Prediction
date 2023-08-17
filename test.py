@@ -126,7 +126,6 @@ def validate_traj(model, dataloader, args, recorder, writer):
         )
 
         recorder.eval_traj_batch_update(itern, data, traj_gt.detach().cpu().numpy(), traj_pred.detach().cpu().numpy())
-        break
 
     val_loss = total_val_loss / len(dataloader)
     score = recorder.eval_traj_epoch_calculate(writer)
