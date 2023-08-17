@@ -108,7 +108,7 @@ class SGNetTrajBbox(ModelTemplate):
             dec_traj[:,dec_step,:] = self.regressor(dec_hidden)
         return dec_traj
         
-    def encoder(self, traj_input, flow_input=None, start_index = 0):
+    def encoder(self, traj_input, start_index = 0):
         # initial output tensor
         all_goal_traj = traj_input.new_zeros(traj_input.size(0), self.enc_steps, self.dec_steps, self.pred_dim)
         all_dec_traj = traj_input.new_zeros(traj_input.size(0), self.enc_steps, self.dec_steps, self.pred_dim)
