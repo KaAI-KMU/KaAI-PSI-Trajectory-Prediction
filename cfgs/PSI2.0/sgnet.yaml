@@ -16,7 +16,7 @@ model_cfg:
         dropout: 0.0
 
 optimization:
-        batch_size: 16
+        batch_size: 128
         num_epochs: 50
 
         optimizer: Adam
