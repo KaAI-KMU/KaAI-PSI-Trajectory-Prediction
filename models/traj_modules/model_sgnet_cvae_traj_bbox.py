@@ -24,10 +24,13 @@ class SGNetCVAETrajBbox(ModelTemplate):
         self.dataset = dataset
         self.dropout = model_cfg.dropout
         self.use_speed = model_cfg.get('speed_module', None) is not None
-        
+        self.use_desc = model_cfg.get('description_module', None) is not None
+        self.use_flow = model_cfg.get('flow_module', None) is not None
+
         self.bbox_module = SgnetFeatureExtractor(model_cfg.bbox_module)
         self.speed_module = SgnetFeatureExtractor(model_cfg.speed_module) if self.use_speed else None
-        
+        self.flow_module = SgnetFeatureExtractor(model_cfg.flow_module) if self.use_flow else None
+
         self.pred_dim = model_cfg.pred_dim
         self.K = model_cfg.K
         self.map = False
@@ -42,7 +45,7 @@ class SGNetCVAETrajBbox(ModelTemplate):
             self.pred_dim = 2
             # the predict shift is in meter
             self.regressor = nn.Sequential(nn.Linear(self.hidden_size, 
-                                                        self.pred_dim))   
+                                                        self.pred_dim))
         self.enc_goal_attn = nn.Sequential(nn.Linear(self.hidden_size//4,
                                                 1),
                                                 nn.ReLU(inplace=True))
@@ -78,7 +81,7 @@ class SGNetCVAETrajBbox(ModelTemplate):
         self.enc_drop = nn.Dropout(self.dropout)
         self.goal_drop = nn.Dropout(self.dropout)
         self.dec_drop = nn.Dropout(self.dropout)
-        self.traj_enc_cell = nn.GRUCell(self.hidden_size + self.hidden_size//4, self.hidden_size)
+        self.traj_enc_cell = nn.GRUCell(self.hidden_size//5 + self.hidden_size//5 + self.hidden_size//4, self.hidden_size)
         self.goal_cell = nn.GRUCell(self.hidden_size//4, self.hidden_size//4)
         self.dec_cell = nn.GRUCell(self.hidden_size + self.hidden_size//4, self.hidden_size)
 
@@ -108,7 +111,7 @@ class SGNetCVAETrajBbox(ModelTemplate):
         goal_for_enc  = torch.bmm(enc_attn, goal_for_enc).squeeze(1)
         return goal_for_dec, goal_for_enc, goal_traj
 
-    def cvae_decoder(self, dec_hidden, goal_for_dec):
+    def cvae_decoder(self, dec_hidden, goal_for_dec, flow_input, speed_input):
         batch_size = dec_hidden.size(0)
        
         K = dec_hidden.shape[1]
@@ -123,8 +126,11 @@ class SGNetCVAETrajBbox(ModelTemplate):
             dec_attn = F.softmax(dec_attn, dim =1).unsqueeze(1)
             goal_dec_input  = torch.bmm(dec_attn,goal_dec_input).squeeze(1)
             goal_dec_input = goal_dec_input.unsqueeze(1).repeat(1, K, 1).view(-1, goal_dec_input.shape[-1])
+
             dec_dec_input = self.dec_hidden_to_input(dec_hidden)
-            dec_input = self.dec_drop(torch.cat((goal_dec_input,dec_dec_input),dim = -1))
+            speed_input = speed_input.view(-1, speed_input.shape[-1])
+            flow_input = flow_input.view(-1, flow_input.shape[-1])            
+            dec_input = self.dec_drop(torch.cat((goal_dec_input,dec_dec_input,flow_input,speed_input),dim = -1))
             dec_hidden = self.dec_cell(dec_input, dec_hidden)
             # regress dec traj for loss
             batch_traj = self.regressor(dec_hidden)
@@ -132,7 +138,7 @@ class SGNetCVAETrajBbox(ModelTemplate):
             dec_traj[:,dec_step,:,:] = batch_traj
         return dec_traj
 
-    def encoder(self, raw_inputs, raw_targets, traj_input, flow_input=None, start_index = 0):
+    def encoder(self, raw_inputs, raw_targets, traj_input, flow_input=None, speed_input=None ,start_index = 0):
         # initial output tensor
         all_goal_traj = traj_input.new_zeros(traj_input.size(0), self.enc_steps, self.dec_steps, self.pred_dim)
         all_cvae_dec_traj = traj_input.new_zeros(traj_input.size(0), self.enc_steps, self.dec_steps, self.K, self.pred_dim)
@@ -159,7 +165,7 @@ class SGNetCVAETrajBbox(ModelTemplate):
             if self.map:
                 map_input = flow_input
                 cvae_dec_hidden = (cvae_dec_hidden + map_input.unsqueeze(1))/2
-            all_cvae_dec_traj[:,enc_step,:,:,:] = self.cvae_decoder(cvae_dec_hidden, goal_for_dec)
+            all_cvae_dec_traj[:,enc_step,:,:,:] = self.cvae_decoder(cvae_dec_hidden, goal_for_dec,flow_input,speed_input)
         return all_goal_traj, all_cvae_dec_traj, total_KLD, total_probabilities
             
     def forward(self, data, training=True):
@@ -170,10 +176,17 @@ class SGNetCVAETrajBbox(ModelTemplate):
         input_list = []
         bbox_input = self.bbox_module(bboxes)
         input_list.append(bbox_input)
+
         if self.use_speed:
             speed = data['speed'][:, :self.observe_length, :].to(device).type(FloatTensor)
             speed_input = self.speed_module(speed)
-            input_list.append(speed_input)
+            speed_input = self.speed_fc(speed_input.permute(0,2,1)).repeat(1,1,self.K).permute(0,2,1).reshape(-1,128)
+
+        if self.use_flow:
+            flow = data['optical_features'][:, :self.observe_length, :].to(device).type(FloatTensor)
+            flow_input = self.flow_module(flow)
+            flow_input = self.flow_fc(flow_input.permute(0,2,1)).repeat(1,1,self.K).permute(0,2,1).reshape(-1,flow_input.shape[-1])     
+                   
         traj_input = torch.cat(input_list, dim=-1)
         all_goal_traj, all_cvae_dec_traj, KLD, total_probabilities = self.encoder(bboxes, targets, traj_input)
         
