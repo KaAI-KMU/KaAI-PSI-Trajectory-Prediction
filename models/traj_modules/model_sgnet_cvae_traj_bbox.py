@@ -24,11 +24,9 @@ class SGNetCVAETrajBbox(ModelTemplate):
         self.dataset = dataset
         self.dropout = model_cfg.dropout
         self.use_speed = model_cfg.get('speed_module', None) is not None
-        self.use_desc = model_cfg.get('description_module', None) is not None
         
         self.bbox_module = SgnetFeatureExtractor(model_cfg.bbox_module)
         self.speed_module = SgnetFeatureExtractor(model_cfg.speed_module) if self.use_speed else None
-        self.desc_module = DescFeatureExtractor(model_cfg.description_module, freeze_params=True) if self.use_desc else None
         
         self.pred_dim = model_cfg.pred_dim
         self.K = model_cfg.K
@@ -176,10 +174,6 @@ class SGNetCVAETrajBbox(ModelTemplate):
             speed = data['speed'][:, :self.observe_length, :].to(device).type(FloatTensor)
             speed_input = self.speed_module(speed)
             input_list.append(speed_input)
-        if self.use_desc:
-            desc = data['single_description']
-            desc_input = self.desc_module(desc, frame_len=bbox_input.shape[1])
-            input_list.append(desc_input)
         traj_input = torch.cat(input_list, dim=-1)
         all_goal_traj, all_cvae_dec_traj, KLD, total_probabilities = self.encoder(bboxes, targets, traj_input)
         
