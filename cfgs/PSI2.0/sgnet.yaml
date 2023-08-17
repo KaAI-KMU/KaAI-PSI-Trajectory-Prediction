@@ -20,13 +20,8 @@ optimization:
         num_epochs: 50
 
         optimizer: Adam
-        lr: 0.0005
+        lr: 0.001
         weight_decay: 0.0
 
 lr_scheduler:
-        scheduler: ReduceLROnPlateau
-        factor: 0.2
-        patience: 5
-        min_lr: 0.0000000001 # 1e-10
-        # scheduler: ExponentialLR
-        # gamma: 0.9
+        scheduler: none

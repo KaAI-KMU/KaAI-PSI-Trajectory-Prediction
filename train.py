@@ -37,6 +37,8 @@ def train_traj(model, optimizer, scheduler, train_loader, val_loader, args, reco
             scheduler.step(val_loss)
         elif isinstance(scheduler, torch.optim.lr_scheduler.ExponentialLR):
             scheduler.step()
+        else:
+            pass
 
         torch.save(model.state_dict(), args.checkpoint_path + f'/latest.pth')
 

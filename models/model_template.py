@@ -20,9 +20,11 @@ class ModelTemplate(nn.Module):
                                                                    verbose=True)
         elif scheduler_cfg.scheduler == 'ExponentialLR':
             scheduler = torch.optim.lr_scheduler.ExponentialLR(optimizer, gamma=scheduler_cfg.gamma)
+        elif scheduler_cfg.scheduler == 'none':
+            scheduler = None
         else:
             raise NotImplementedError
-        return optimizer, scheduler    
+        return optimizer, scheduler
         
     def load_params_from_file(self, filename, to_cpu=False):
         if not os.path.isfile(filename):

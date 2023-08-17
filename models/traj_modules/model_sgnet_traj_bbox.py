@@ -142,7 +142,7 @@ class SGNetTrajBbox(ModelTemplate):
 
         self.forward_ret_dict['all_goal_traj'] = all_goal_traj
         self.forward_ret_dict['all_dec_traj'] = all_dec_traj
-        self.forward_ret_dict['traj_pred'] = all_goal_traj[:,-1,:,:]
+        self.forward_ret_dict['traj_pred'] = all_dec_traj[:,-1,:,:]
         return self.forward_ret_dict
     
     def get_loss(self, targets):
