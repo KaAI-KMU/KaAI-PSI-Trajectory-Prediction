@@ -37,8 +37,10 @@ def train_traj(model, optimizer, scheduler, train_loader, val_loader, args, reco
             scheduler.step(val_loss)
         elif isinstance(scheduler, torch.optim.lr_scheduler.ExponentialLR):
             scheduler.step()
-        else:
+        elif scheduler is None:
             pass
+        else:
+            raise NotImplementedError
 
         torch.save(model.state_dict(), args.checkpoint_path + f'/latest.pth')
 
@@ -69,7 +71,6 @@ def train_traj_epoch(epoch, model, optimizer, epoch_loss, dataloader, args, reco
 
         recorder.train_traj_batch_update(itern, data, traj_gt.detach().cpu().numpy(), traj_pred.detach().cpu().numpy(),
                                          loss.item(), traj_loss.item())
-        
 
     epoch_loss['loss_traj'].append(np.mean(batch_losses['loss_traj']))
 
