@@ -1,4 +1,4 @@
-model_name: SGNetTrajBbox
+model_name: SGNetCVAETrajBbox
 dataset: PSI2.0
 
 model_cfg:

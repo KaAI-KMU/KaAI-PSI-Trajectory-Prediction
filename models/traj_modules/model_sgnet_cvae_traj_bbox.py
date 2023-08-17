@@ -14,9 +14,9 @@ FloatTensor = torch.cuda.FloatTensor if cuda else torch.FloatTensor
 LongTensor = torch.cuda.LongTensor if cuda else torch.LongTensor
 
 
-class SGNetTrajBbox(ModelTemplate):
+class SGNetCVAETrajBbox(ModelTemplate):
     def __init__(self, model_cfg, dataset):
-        super(SGNetTrajBbox, self).__init__()
+        super(SGNetCVAETrajBbox, self).__init__()
         self.cvae = BiTraPNP(model_cfg.cvae)
         self.hidden_size = model_cfg.hidden_size # GRU hidden size
         self.enc_steps = model_cfg.enc_steps # observation step
