@@ -53,6 +53,19 @@ class rmse_loss(nn.Module):
         return L2_mean_pred
     
 
+def euclidean_dist(x, y):
+    '''
+    Params:
+        x: (batch_size, predict_len, pred_dim)
+        y: (batch_size, predict_len, pred_dim)
+    Returns:
+        dist: (batch_size, predict_len)
+    '''
+    assert x.size() == y.size()
+    dist = torch.sqrt(torch.sum((x - y)**2, dim=-1))
+    return dist
+    
+
 def cvae_multi(pred_traj, target, first_history_index = 0):
     K = pred_traj.shape[3]
     
