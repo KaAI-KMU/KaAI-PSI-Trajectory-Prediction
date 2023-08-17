@@ -53,9 +53,6 @@ class VideoDataset(torch.utils.data.Dataset):
         global_featmaps, local_featmaps = self.load_features(video_ids, ped_ids, frame_list)
         reason_features = self.load_reason_features(video_ids, ped_ids, frame_list)
         
-        for _ in range(len(description)):
-            single_description = ''.join([item for sublist in description for item in sublist if item])
-        
         for f in range(len(frame_list)): #(len(bboxes)):
             box = bboxes[f]
             xtl, ytl, xrb, yrb = box
@@ -77,7 +74,7 @@ class VideoDataset(torch.utils.data.Dataset):
         if self.args.relative_bbox: # False in default
             input_bboxes = input_bboxes - input_bboxes[:1, :]
 
-        if self.args.model_name == 'SGNetTrajBbox':
+        if 'SGNet' in self.args.model_name:
             bboxes = bboxes - bboxes[:1, :]
             t = []
             predict_length = bboxes.shape[0] - self.args.observe_length
@@ -89,7 +86,6 @@ class VideoDataset(torch.utils.data.Dataset):
             t = torch.stack(t)
             jh = torch.from_numpy(bboxes[:self.args.observe_length]).unsqueeze(dim=1).repeat((1,predict_length,1))
             targets = t - jh
-            # description_features = description_features[]
         else:
             targets = torch.from_numpy(bboxes[self.args.observe_length:,:])     
             
@@ -112,8 +108,6 @@ class VideoDataset(torch.utils.data.Dataset):
             'ped_id': ped_ids[0], 
             'disagree_score': disagree_score,
             'targets': targets,
-            'single_description': single_description,
-            # 'description': description,
         }
         
         return data
