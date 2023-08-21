@@ -6,7 +6,6 @@ import cv2
 import PIL
 from PIL import Image
 import copy
-from transformers import BertTokenizer, BertForSequenceClassification, BertConfig, BertModel
 
 from utils import utils
 
