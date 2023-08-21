@@ -20,7 +20,12 @@ class SGNetTrajBbox(ModelTemplate):
         self.enc_steps = model_cfg.enc_steps
         self.dec_steps = model_cfg.dec_steps
         self.dropout = model_cfg.dropout
-        self.feature_extractor = SgnetFeatureExtractor(model_cfg.bbox_module)
+        self.use_speed = model_cfg.get('speed_module', None) is not None
+        self.use_flow = model_cfg.get('flow_module', None) is not None
+
+        self.bbox_module = SgnetFeatureExtractor(model_cfg.bbox_module)
+        self.speed_module = SgnetFeatureExtractor(model_cfg.speed_module) if self.use_speed else None
+        self.flow_module = SgnetFeatureExtractor(model_cfg.flow_module) if self.use_flow else None        
 
         self.pred_dim = 4
         self.regressor = nn.Sequential(nn.Linear(self.hidden_size, 
@@ -100,7 +105,6 @@ class SGNetTrajBbox(ModelTemplate):
             dec_attn = F.softmax(dec_attn, dim =1).unsqueeze(1)
             goal_dec_input  = torch.bmm(dec_attn,goal_dec_input).squeeze(1)#.view(goal_hidden.size(0), self.dec_steps, self.hidden_size//4).sum(1)
             
-            
             dec_dec_input = self.dec_hidden_to_input(dec_hidden)
             dec_input = self.dec_drop(torch.cat((goal_dec_input,dec_dec_input),dim = -1))
             dec_hidden = self.dec_cell(dec_input, dec_hidden)
@@ -108,7 +112,9 @@ class SGNetTrajBbox(ModelTemplate):
             dec_traj[:,dec_step,:] = self.regressor(dec_hidden)
         return dec_traj
         
-    def encoder(self, traj_input, start_index = 0):
+    def encoder(self, traj_input, additional_dict=None):
+        speed_input = additional_dict.get('speed_input', None)
+        flow_input = additional_dict.get('flow_input', None)
         # initial output tensor
         all_goal_traj = traj_input.new_zeros(traj_input.size(0), self.enc_steps, self.dec_steps, self.pred_dim)
         all_dec_traj = traj_input.new_zeros(traj_input.size(0), self.enc_steps, self.dec_steps, self.pred_dim)
@@ -116,7 +122,7 @@ class SGNetTrajBbox(ModelTemplate):
         goal_for_enc = traj_input.new_zeros((traj_input.size(0), self.hidden_size//4))
         # initial encoder hidden with zeros
         traj_enc_hidden = traj_input.new_zeros((traj_input.size(0), self.hidden_size))
-        for enc_step in range(start_index, self.enc_steps):
+        for enc_step in range(0, self.enc_steps):
             
             traj_enc_hidden = self.traj_enc_cell(self.enc_drop(torch.cat((traj_input[:,enc_step,:], goal_for_enc), 1)), traj_enc_hidden)
             enc_hidden = traj_enc_hidden
@@ -124,6 +130,11 @@ class SGNetTrajBbox(ModelTemplate):
             goal_hidden = self.enc_to_goal_hidden(enc_hidden)
             dec_hidden = self.enc_to_dec_hidden(enc_hidden)
 
+            # concat speed and flow
+            if speed_input is not None:
+                pass
+            if flow_input is not None:
+                pass
             goal_for_dec, goal_for_enc, goal_traj = self.SGE(goal_hidden)
             dec_traj = self.decoder(dec_hidden, goal_for_dec)
 
@@ -137,7 +148,17 @@ class SGNetTrajBbox(ModelTemplate):
     def forward(self, data, training=True):
         bboxes = data['bboxes'][:,:self.observe_length,:].to(device).type(FloatTensor)
 
-        traj_input = self.feature_extractor(bboxes)
+        traj_input = self.bbox_module(bboxes)
+        additional_dict = {}
+        if self.use_speed:
+            speed = data['speed'][:, :self.observe_length, :].to(device).type(FloatTensor)
+            speed_input = self.speed_module(speed)
+            additional_dict['speed_input'] = speed_input
+        if self.use_flow:
+            flow = data['flow'][:, :self.observe_length, :].to(device).type(FloatTensor)
+            flow_input = self.flow_module(flow)
+            additional_dict['flow_input'] = flow_input
+
         all_goal_traj, all_dec_traj = self.encoder(traj_input)
 
         self.forward_ret_dict['all_goal_traj'] = all_goal_traj
