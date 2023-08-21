@@ -24,7 +24,6 @@ class SGNetCVAETrajBbox(ModelTemplate):
         self.dataset = dataset
         self.dropout = model_cfg.dropout
         self.use_speed = model_cfg.get('speed_module', None) is not None
-        self.use_desc = model_cfg.get('description_module', None) is not None
         self.use_flow = model_cfg.get('flow_module', None) is not None
 
         self.bbox_module = SgnetFeatureExtractor(model_cfg.bbox_module)
