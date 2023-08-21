@@ -7,7 +7,7 @@ from easydict import EasyDict
 def get_opts():
     parser = argparse.ArgumentParser(description='PyTorch implementation of the PSI2.0')
     # about data
-    parser.add_argument('--config_file', type=str, default='cfgs/PSI2.0/sgnet.yaml', help='specify the config file for training')
+    parser.add_argument('--config_file', type=str, default='cfgs/PSI2.0/sgnet_cvae_flow_speed.yaml', help='specify the config file for training')
     parser.add_argument('--dataset', type=str, default='PSI2.0',
                         help='task name: [PSI1.0 | PSI2.0]')
     parser.add_argument('--task_name', type=str, default='ped_traj',
@@ -111,6 +111,10 @@ def get_opts():
         cfg.optimization.epochs = args.epochs
     else:
         args.epochs = cfg.optimization.num_epochs
+    if cfg.model_cfg.get('flow_module', None) is not None:
+        args.use_flow = True
+    else:
+        args.use_flow = False
 
     args.observe_length = cfg.model_cfg.observe_length
     args.predict_length = cfg.model_cfg.predict_length
