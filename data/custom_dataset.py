@@ -21,6 +21,7 @@ class VideoDataset(torch.utils.data.Dataset):
         self.stage = stage
         self.set_transform()
         self.flow_path = os.path.join(args.dataset_root_path, 'optical_flow')
+        self.use_flow = args.use_flow
         print(self.data.keys())
 
     def __getitem__(self, index):
@@ -71,7 +72,7 @@ class VideoDataset(torch.utils.data.Dataset):
         )
 
         input_bboxes = bboxes.copy()
-        optical_features = self.load_optical_flow(video_ids, frame_list, bboxes)
+        optical_features = self.load_optical_flow(video_ids, frame_list, bboxes) if self.use_flow else None
         if self.args.relative_bbox: # False in default
             input_bboxes = input_bboxes - input_bboxes[:1, :]
 
@@ -87,7 +88,8 @@ class VideoDataset(torch.utils.data.Dataset):
             t = torch.stack(t)
             jh = torch.from_numpy(bboxes[:self.args.observe_length]).unsqueeze(dim=1).repeat((1,predict_length,1))
             targets = t - jh
-            optical_features = optical_features[:self.args.observe_length]
+            if self.use_flow:
+                optical_features = optical_features[:self.args.observe_length]
             # description_features = description_features[]
         else:
             targets = torch.from_numpy(bboxes[self.args.observe_length:,:])     
@@ -111,8 +113,9 @@ class VideoDataset(torch.utils.data.Dataset):
             'ped_id': ped_ids[0], 
             'disagree_score': disagree_score,
             'targets': targets,
-            'optical_features': optical_features
         }
+        if self.use_flow:
+            data['optical_flow'] = optical_features
         
         return data
 
