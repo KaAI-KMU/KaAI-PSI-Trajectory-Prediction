@@ -85,17 +85,45 @@ class BiTraPNP(nn.Module):
         
         # 4. Draw sample
         with torch.set_grad_enabled(False):
+            #K_samples = torch.tensor(self.nu).cuda()
             K_samples = torch.normal(self.nu, self.sigma, size = (enc_h.shape[0], K, self.model_cfg.latent_dim)).cuda()
 
         probability = reconstructed_probability(K_samples)
+        
         Z_std = torch.exp(0.5 * Z_logvar)
         Z = Z_mu.unsqueeze(1).repeat(1, K, 1) + K_samples * Z_std.unsqueeze(1).repeat(1, K, 1)
+        
+        #max_prob_idx = torch.argmax(probability, dim=-1)
+        #Z = torch.stack([Z[i, idx] for i, idx in enumerate(max_prob_idx)])
         if z_mode:
             Z = torch.cat((Z_mu.unsqueeze(1), Z), dim=1)
-
-        
+            
+        #Z = Z.unsqueeze(1)
         return Z, KLD, probability
+    
 
+class DeterministicBiTraPNP(BiTraPNP):
+    def __init__(self, model_cfg):
+        super(DeterministicBiTraPNP, self).__init__(model_cfg)
+
+    def gaussian_latent_net(self, enc_h, cur_state, K,  target=None, z_mode=None):
+        # 1. No sampling from posterior, directly use mu
+        z_mu_logvar_p = self.p_z_x(enc_h)
+        Z_mu = z_mu_logvar_p[:, :self.model_cfg['latent_dim']]
+        
+        # 2. No KLD computation as we are making it deterministic
+        KLD = torch.as_tensor(0.0, device=Z_mu.device)
+        
+        # 3. No sampling, directly use Z_mu for all K samples
+        Z = Z_mu.unsqueeze(1).repeat(1, K, 1)
+        
+        # No probability computation as it's deterministic
+        probability = torch.ones(Z.shape[0], K).to(Z.device)
+        
+        if z_mode:
+            Z = torch.cat((Z_mu.unsqueeze(1), Z), dim=1)
+            
+        return Z, KLD, probability
 
     def forward(self, h_x, last_input, K, target_y=None, Training=True):
         '''

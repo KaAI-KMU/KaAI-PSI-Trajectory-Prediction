@@ -8,6 +8,8 @@ from data.process_sequence import generate_data_sequence
 from data.custom_dataset import VideoDataset
 
 def get_dataloader(args, shuffle_train=True, drop_last_train=True):
+    
+        
     with open(os.path.join(args.database_path, 'traj_database_train.pkl'), 'rb') as fid:
         imdb_train = pickle.load(fid)
     train_seq = generate_data_sequence('train', imdb_train, args)

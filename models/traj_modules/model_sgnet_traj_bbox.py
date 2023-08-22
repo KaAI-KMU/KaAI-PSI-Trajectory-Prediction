@@ -1,6 +1,7 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+import os
 
 from utils.utils import rmse_loss
 from ..model_template import ModelTemplate
@@ -182,3 +183,6 @@ class SGNetTrajBbox(ModelTemplate):
         dec_loss = self.criterion(self.forward_ret_dict['all_dec_traj'], targets)
         traj_loss = goal_loss + dec_loss
         return {'traj_loss': traj_loss, 'goal_loss': goal_loss, 'dec_loss': dec_loss}
+    
+    
+

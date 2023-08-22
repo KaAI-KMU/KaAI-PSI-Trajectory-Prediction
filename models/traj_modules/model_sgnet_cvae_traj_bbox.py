@@ -5,7 +5,7 @@ import torch.nn.functional as F
 
 from utils.utils import rmse_loss, cvae_multi
 from ..model_template import ModelTemplate
-from .model_bitrap_traj_bbox import BiTraPNP
+from .model_bitrap_traj_bbox import BiTraPNP, DeterministicBiTraPNP
 from ..feature_extractor import *
 
 cuda = True if torch.cuda.is_available() else False
@@ -50,6 +50,8 @@ class SGNetCVAETrajBbox(ModelTemplate):
         self.map = False
         # the predict shift is in pixel
         self.pred_dim = 4
+        self.speed_fc = nn.Sequential(nn.Linear(model_cfg.observe_length,1), nn.ReLU(inplace=True))
+        self.flow_fc = nn.Sequential(nn.Linear(model_cfg.observe_length,1), nn.ReLU(inplace=True))
         self.regressor = nn.Sequential(nn.Linear(self.hidden_size, 
                                                     self.pred_dim),
                                                     nn.Tanh())
@@ -208,7 +210,7 @@ class SGNetCVAETrajBbox(ModelTemplate):
 
         return self.forward_ret_dict
     
-    def get_loss(self, targets):
+    def get_loss(self, targets): 
         all_goal_traj = self.forward_ret_dict['all_goal_traj']
         all_cvae_dec_traj = self.forward_ret_dict['all_cvae_dec_traj']
         KLD = self.forward_ret_dict['KLD']
@@ -228,4 +230,5 @@ class SGNetCVAETrajBbox(ModelTemplate):
         }
 
         return loss_dict
-        
+    
+    
