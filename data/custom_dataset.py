@@ -10,7 +10,6 @@ import copy
 from utils import utils
 
 
-
 class VideoDataset(torch.utils.data.Dataset):
     def __init__(self, data, args, stage='train'):
         super(VideoDataset, self).__init__()
@@ -29,7 +28,6 @@ class VideoDataset(torch.utils.data.Dataset):
         assert video_ids[0] == video_ids[-1] # all video_id should be the same
         assert ped_ids[0] == ped_ids[-1]  # all video_id should be the same
         frame_list = self.data['frame'][index][:self.args.observe_length] # return first 15 frames as observed
-        description = self.data['description'][index]
         bboxes = self.data['bbox'][index] # return all 60 frames #[:-1] # take first 15 frames as input
         speed = self.data['speed'][index]
             

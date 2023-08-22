@@ -3,8 +3,6 @@ import torch.nn as nn
 from torchvision import datasets, transforms, models
 import torch.nn.functional as F
 
-from transformers import BertTokenizer, BertForSequenceClassification, BertConfig, BertModel
-
 cuda = True if torch.cuda.is_available() else False
 device = torch.device("cuda:0" if cuda else "cpu")
 FloatTensor = torch.cuda.FloatTensor if cuda else torch.FloatTensor
