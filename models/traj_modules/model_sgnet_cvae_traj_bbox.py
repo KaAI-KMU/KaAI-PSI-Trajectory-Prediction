@@ -5,7 +5,7 @@ import torch.nn.functional as F
 
 from utils.utils import rmse_loss, cvae_multi
 from ..model_template import ModelTemplate
-from .model_bitrap_traj_bbox import BiTraPNP, DeterministicBiTraPNP
+from .model_bitrap_traj_bbox import BiTraPNP
 from ..feature_extractor import *
 
 cuda = True if torch.cuda.is_available() else False
@@ -121,8 +121,6 @@ class SGNetCVAETrajBbox(ModelTemplate):
         return goal_for_dec, goal_for_enc, goal_traj
 
     def cvae_decoder(self, dec_hidden, goal_for_dec, additional_dict=None):
-        speed_input = additional_dict.get('speed_input', None) if additional_dict is not None else None
-        flow_input = additional_dict.get('flow_input', None) if additional_dict is not None else None
         batch_size = dec_hidden.size(0)
        
         K = dec_hidden.shape[1]
@@ -140,12 +138,11 @@ class SGNetCVAETrajBbox(ModelTemplate):
 
             dec_dec_input = self.dec_hidden_to_input(dec_hidden)
             dec_input = torch.cat((goal_dec_input,dec_dec_input),dim = -1)
-            if speed_input is not None:
-                speed_input = speed_input.view(-1, speed_input.shape[-1])
-                dec_input = torch.cat((dec_input, speed_input), dim=-1)
-            if flow_input is not None:
-                flow_input = flow_input.view(-1, flow_input.shape[-1])
-                dec_input = torch.cat((dec_input, flow_input), dim=-1)
+            
+            if additional_dict is not None:
+                for k, input_features in additional_dict.items():
+                    dec_input = torch.cat((dec_input, input_features), dim=-1)
+                        
             dec_input = self.dec_drop(dec_input)
             dec_hidden = self.dec_cell(dec_input, dec_hidden)
             # regress dec traj for loss
@@ -171,14 +168,20 @@ class SGNetCVAETrajBbox(ModelTemplate):
             goal_for_dec, goal_for_enc, goal_traj = self.SGE(goal_hidden)
             all_goal_traj[:,enc_step,:,:] = goal_traj
             dec_hidden = self.enc_to_dec_hidden(enc_hidden)
+            
+            
             if self.training:
                 cvae_hidden, KLD, probability = self.cvae(dec_hidden, raw_inputs[:,enc_step,:], self.K, raw_targets[:,enc_step,:,:])
             else:
                 cvae_hidden, KLD, probability = self.cvae(dec_hidden, raw_inputs[:,enc_step,:], self.K)
+            
+            if additional_dict is not None:
+                additional_dict_single = {k: v[:,enc_step,:] for k, v in additional_dict.items()}
+            
             total_probabilities[:,enc_step,:] = probability
             total_KLD += KLD
             cvae_dec_hidden= self.cvae_to_dec_hidden(cvae_hidden)
-            all_cvae_dec_traj[:,enc_step,:,:,:] = self.cvae_decoder(cvae_dec_hidden, goal_for_dec, additional_dict)
+            all_cvae_dec_traj[:,enc_step,:,:,:] = self.cvae_decoder(cvae_dec_hidden, goal_for_dec, additional_dict_single)
         return all_goal_traj, all_cvae_dec_traj, total_KLD, total_probabilities
             
     def forward(self, data, training=True):
@@ -192,12 +195,10 @@ class SGNetCVAETrajBbox(ModelTemplate):
         if self.use_speed:
             speed = data['speed'][:, :self.observe_length, :].to(device).type(FloatTensor)
             speed_input = self.speed_module(speed)
-            speed_input = self.speed_fc(speed_input.permute(0,2,1)).repeat(1,1,self.K).permute(0,2,1).reshape(-1,speed_input.shape[-1])
             additional_dict['speed_input'] = speed_input
         if self.use_flow:
             flow = data['optical_flow'][:, :self.observe_length, :].to(device).type(FloatTensor)
             flow_input = self.flow_module(flow)
-            flow_input = self.flow_fc(flow_input.permute(0,2,1)).repeat(1,1,self.K).permute(0,2,1).reshape(-1,flow_input.shape[-1])
             additional_dict['flow_input'] = flow_input
 
         all_goal_traj, all_cvae_dec_traj, KLD, total_probabilities = self.encoder(bboxes, bbox_input, targets, additional_dict)
