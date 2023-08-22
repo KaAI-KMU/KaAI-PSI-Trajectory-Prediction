@@ -18,6 +18,7 @@ class SGNetCVAETrajBbox(ModelTemplate):
     def __init__(self, model_cfg, dataset):
         super(SGNetCVAETrajBbox, self).__init__()
         self.cvae = BiTraPNP(model_cfg.cvae)
+        self.observe_length = model_cfg.observe_length
         self.hidden_size = model_cfg.hidden_size # GRU hidden size
         self.enc_steps = model_cfg.enc_steps # observation step
         self.dec_steps = model_cfg.dec_steps # prediction step
@@ -27,8 +28,22 @@ class SGNetCVAETrajBbox(ModelTemplate):
         self.use_flow = model_cfg.get('flow_module', None) is not None
 
         self.bbox_module = SgnetFeatureExtractor(model_cfg.bbox_module)
-        self.speed_module = SgnetFeatureExtractor(model_cfg.speed_module) if self.use_speed else None
-        self.flow_module = SgnetFeatureExtractor(model_cfg.flow_module) if self.use_flow else None
+        traj_enc_cell_hidden_size = model_cfg.bbox_module.output_dim + self.hidden_size//4
+        dec_cell_hidden_size = self.hidden_size + self.hidden_size//4
+        if self.use_speed:
+            self.speed_module = SgnetFeatureExtractor(model_cfg.speed_module)
+            self.speed_fc = nn.Linear(self.observe_length, 1)
+            dec_cell_hidden_size += model_cfg.speed_module.output_dim
+        else:
+            self.speed_module = None
+            self.speed_fc = None
+        if self.use_flow:
+            self.flow_module = SgnetFeatureExtractor(model_cfg.flow_module) if self.use_flow else None
+            self.flow_fc = nn.Linear(self.observe_length, 1)
+            dec_cell_hidden_size += model_cfg.flow_module.output_dim
+        else:
+            self.flow_module = None
+            self.flow_fc = None
 
         self.pred_dim = model_cfg.pred_dim
         self.K = model_cfg.K
@@ -74,12 +89,11 @@ class SGNetCVAETrajBbox(ModelTemplate):
         self.enc_drop = nn.Dropout(self.dropout)
         self.goal_drop = nn.Dropout(self.dropout)
         self.dec_drop = nn.Dropout(self.dropout)
-        self.traj_enc_cell = nn.GRUCell(self.hidden_size//5 + self.hidden_size//5 + self.hidden_size//4, self.hidden_size)
+        self.traj_enc_cell = nn.GRUCell(traj_enc_cell_hidden_size, self.hidden_size)
         self.goal_cell = nn.GRUCell(self.hidden_size//4, self.hidden_size//4)
-        self.dec_cell = nn.GRUCell(self.hidden_size + self.hidden_size//4, self.hidden_size)
+        self.dec_cell = nn.GRUCell(dec_cell_hidden_size, self.hidden_size)
 
         self.criterion = rmse_loss().to(device)
-        self.observe_length = model_cfg.observe_length
         self.forward_ret_dict = {}
     
     def SGE(self, goal_hidden):
@@ -105,8 +119,8 @@ class SGNetCVAETrajBbox(ModelTemplate):
         return goal_for_dec, goal_for_enc, goal_traj
 
     def cvae_decoder(self, dec_hidden, goal_for_dec, additional_dict=None):
-        speed_input = additional_dict.get('speed_input', None)
-        flow_input = additional_dict.get('flow_input', None)
+        speed_input = additional_dict.get('speed_input', None) if additional_dict is not None else None
+        flow_input = additional_dict.get('flow_input', None) if additional_dict is not None else None
         batch_size = dec_hidden.size(0)
        
         K = dec_hidden.shape[1]
@@ -179,7 +193,7 @@ class SGNetCVAETrajBbox(ModelTemplate):
             speed_input = self.speed_fc(speed_input.permute(0,2,1)).repeat(1,1,self.K).permute(0,2,1).reshape(-1,speed_input.shape[-1])
             additional_dict['speed_input'] = speed_input
         if self.use_flow:
-            flow = data['optical_features'][:, :self.observe_length, :].to(device).type(FloatTensor)
+            flow = data['optical_flow'][:, :self.observe_length, :].to(device).type(FloatTensor)
             flow_input = self.flow_module(flow)
             flow_input = self.flow_fc(flow_input.permute(0,2,1)).repeat(1,1,self.K).permute(0,2,1).reshape(-1,flow_input.shape[-1])
             additional_dict['flow_input'] = flow_input
