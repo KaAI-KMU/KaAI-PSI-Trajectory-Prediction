@@ -16,6 +16,7 @@ class SGNetTrajBbox(ModelTemplate):
     def __init__(self, model_cfg, dataset=None):
         super(SGNetTrajBbox, self).__init__()
 
+        self.observe_length = model_cfg.observe_length
         self.hidden_size = model_cfg.hidden_size
         self.enc_steps = model_cfg.enc_steps
         self.dec_steps = model_cfg.dec_steps
@@ -24,8 +25,22 @@ class SGNetTrajBbox(ModelTemplate):
         self.use_flow = model_cfg.get('flow_module', None) is not None
 
         self.bbox_module = SgnetFeatureExtractor(model_cfg.bbox_module)
-        self.speed_module = SgnetFeatureExtractor(model_cfg.speed_module) if self.use_speed else None
-        self.flow_module = SgnetFeatureExtractor(model_cfg.flow_module) if self.use_flow else None        
+        traj_enc_cell_hidden_size = model_cfg.bbox_module.output_dim + self.hidden_size//4
+        dec_cell_hidden_size = self.hidden_size + self.hidden_size//4
+        if self.use_speed:
+            self.speed_module = SgnetFeatureExtractor(model_cfg.speed_module)
+            self.speed_fc = nn.Linear(self.observe_length, 1)
+            dec_cell_hidden_size += model_cfg.speed_module.output_dim
+        else:
+            self.speed_module = None
+            self.speed_fc = None
+        if self.use_flow:
+            self.flow_module = SgnetFeatureExtractor(model_cfg.flow_module) if self.use_flow else None
+            self.flow_fc = nn.Linear(self.observe_length, 1)
+            dec_cell_hidden_size += model_cfg.flow_module.output_dim
+        else:
+            self.flow_module = None
+            self.flow_fc = None
 
         self.pred_dim = 4
         self.regressor = nn.Sequential(nn.Linear(self.hidden_size, 
@@ -67,12 +82,11 @@ class SGNetTrajBbox(ModelTemplate):
         self.goal_drop = nn.Dropout(self.dropout)
         self.dec_drop = nn.Dropout(self.dropout)
 
-        self.traj_enc_cell = nn.GRUCell(self.hidden_size + self.hidden_size//4, self.hidden_size)
+        self.traj_enc_cell = nn.GRUCell(traj_enc_cell_hidden_size, self.hidden_size)
         self.goal_cell = nn.GRUCell(self.hidden_size//4, self.hidden_size//4)
-        self.dec_cell = nn.GRUCell(self.hidden_size + self.hidden_size//4, self.hidden_size)
+        self.dec_cell = nn.GRUCell(dec_cell_hidden_size, self.hidden_size)
 
         self.criterion = rmse_loss().to(device)
-        self.observe_length = model_cfg.observe_length
         self.forward_ret_dict = {}        
 
     def SGE(self, goal_hidden):
@@ -94,7 +108,7 @@ class SGNetTrajBbox(ModelTemplate):
         goal_for_enc  = torch.bmm(enc_attn, goal_for_enc).squeeze(1)
         return goal_for_dec, goal_for_enc, goal_traj
 
-    def decoder(self, dec_hidden, goal_for_dec):
+    def decoder(self, dec_hidden, goal_for_dec, additional_dict=None):
         # initial trajectory tensor
         dec_traj = dec_hidden.new_zeros(dec_hidden.size(0), self.dec_steps, self.pred_dim)
         for dec_step in range(self.dec_steps):
@@ -107,14 +121,14 @@ class SGNetTrajBbox(ModelTemplate):
             
             dec_dec_input = self.dec_hidden_to_input(dec_hidden)
             dec_input = self.dec_drop(torch.cat((goal_dec_input,dec_dec_input),dim = -1))
-            dec_hidden = self.dec_cell(dec_input, dec_hidden)
+            if additional_dict is not None:
+                for k, input_features in additional_dict.items():
+                    dec_input = torch.cat((dec_input, input_features), dim=-1)
             # regress dec traj for loss
             dec_traj[:,dec_step,:] = self.regressor(dec_hidden)
         return dec_traj
         
     def encoder(self, traj_input, additional_dict=None):
-        speed_input = additional_dict.get('speed_input', None)
-        flow_input = additional_dict.get('flow_input', None)
         # initial output tensor
         all_goal_traj = traj_input.new_zeros(traj_input.size(0), self.enc_steps, self.dec_steps, self.pred_dim)
         all_dec_traj = traj_input.new_zeros(traj_input.size(0), self.enc_steps, self.dec_steps, self.pred_dim)
@@ -130,13 +144,10 @@ class SGNetTrajBbox(ModelTemplate):
             goal_hidden = self.enc_to_goal_hidden(enc_hidden)
             dec_hidden = self.enc_to_dec_hidden(enc_hidden)
 
-            # concat speed and flow
-            if speed_input is not None:
-                pass
-            if flow_input is not None:
-                pass
             goal_for_dec, goal_for_enc, goal_traj = self.SGE(goal_hidden)
-            dec_traj = self.decoder(dec_hidden, goal_for_dec)
+            if additional_dict is not None:
+                additional_dict_single = {k: v[:,enc_step,:] for k, v in additional_dict.items()}
+            dec_traj = self.decoder(dec_hidden, goal_for_dec, additional_dict_single)
 
             # output 
             all_goal_traj[:,enc_step,:,:] = goal_traj
@@ -155,11 +166,11 @@ class SGNetTrajBbox(ModelTemplate):
             speed_input = self.speed_module(speed)
             additional_dict['speed_input'] = speed_input
         if self.use_flow:
-            flow = data['flow'][:, :self.observe_length, :].to(device).type(FloatTensor)
+            flow = data['optical_flow'][:, :self.observe_length, :].to(device).type(FloatTensor)
             flow_input = self.flow_module(flow)
             additional_dict['flow_input'] = flow_input
 
-        all_goal_traj, all_dec_traj = self.encoder(traj_input)
+        all_goal_traj, all_dec_traj = self.encoder(traj_input, additional_dict)
 
         self.forward_ret_dict['all_goal_traj'] = all_goal_traj
         self.forward_ret_dict['all_dec_traj'] = all_dec_traj
