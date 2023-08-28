@@ -59,7 +59,7 @@ def get_opts():
                         help='Backbone type [resnet50 | vgg16 | faster_rcnn]')
     parser.add_argument('--freeze_backbone', type=bool, default=False,
                         help='[True | False]')
-    parser.add_argument('--relative_bbox', action='store_true', default=False,
+    parser.add_argument('--relative_bbox', action='store_true', default=True,
                         help='Use relative bbox as input')
     
     # about training
