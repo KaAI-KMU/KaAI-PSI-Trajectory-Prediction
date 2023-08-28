@@ -51,6 +51,8 @@ def get_opts():
                         help='Do not load image to backbone if not necessary')
     parser.add_argument('--pretrained_path', type=str, default=None,
                         help='Path of the pre-trained pt file')
+    parser.add_argument('--visualize', type=bool, default=False,
+                        help='visulize gt&pred')
     
     # about models
     parser.add_argument('--backbone', type=str, default='resnet50',

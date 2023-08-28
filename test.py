@@ -1,7 +1,8 @@
 import os
 import torch
 import json
-
+import cv2
+from opts import get_opts
 from tqdm import tqdm
 
 from utils import utils
@@ -10,6 +11,12 @@ cuda = True if torch.cuda.is_available() else False
 device = torch.device("cuda:0" if cuda else "cpu")
 FloatTensor = torch.cuda.FloatTensor if cuda else torch.FloatTensor
 LongTensor = torch.cuda.LongTensor if cuda else torch.LongTensor
+args, cfg = get_opts()
+
+# colors = [(0, 0, 255), (0, 255, 255), (0, 255, 0), (255, 0, 0), (255, 0, 255),
+#           (0, 102, 153), (255, 255, 0), (255, 255, 255), (153, 153, 255), (255, 0, 255),
+#           (128, 0, 255), (0, 0, 255), (0, 128, 255), (0, 255, 255), (0, 255, 0),
+#           (128, 255, 0), (255, 255, 0), (255, 128, 0), (255, 0, 0), (255, 0, 128)]
 
 def validate_intent(epoch, model, dataloader, args, recorder, writer):
     model.eval()
@@ -139,10 +146,60 @@ def predict_traj(model, dataloader, args, dset='test'):
     for itern, data in enumerate(dataloader):
         result_dict = model(data, training=False)
         traj_pred = result_dict['traj_pred']
-        # traj_gt = data['original_bboxes'][:, args.observe_length:, :].type(FloatTensor)
-        traj_gt = data['bboxes'][:, args.observe_length:, :].type(FloatTensor)
-        bs, ts, _ = traj_gt.shape
-        # print("Prediction: ", traj_pred.shape)
+        traj_gt = data['bboxes'][:, args.observe_length: , :].type(FloatTensor)
+        traj_gtt=traj_gt
+        traj_gt = traj_gt - traj_gt[:, :1, :].type(FloatTensor)
+
+
+        if args.visualize:
+            for i, (paint_pred, paint_gtt) in enumerate(zip(traj_pred, traj_gtt)):
+                width = 1280
+                height = 720
+                bbox_gpu = data["bboxes"][i][0].to('cuda:0')  # GPU로 변경된 텐서
+                copy_paint_pred_gpu = paint_pred.clone().to('cuda:0')  # GPU로 변경된 예측 텐서
+                copy_paint_pred_gpu += bbox_gpu
+                
+                copy_paint_gtt_gpu = paint_gtt.clone().to('cuda:0')  # GPU로 변경된 실제값 텐서
+                
+                video_idd = data["video_id"][i]
+                ped_idd = data["ped_id"][i]
+                frame_idd = int(data["frames"][i][14]) + 1
+                image = cv2.imread(f"./psi_dataset/frames/{video_idd}/{frame_idd}.jpg")
+                
+                for circle_pred, circle_gtt in zip(copy_paint_pred_gpu, copy_paint_gtt_gpu):
+                    for itern in range(20):
+                        x_pred = int(((circle_pred[itern][2]+circle_pred[itern][0])/2) * width)
+                        y_pred = int(((circle_pred[itern][1]+circle_pred[itern][3])/2) * height)
+                        cv2.circle(image, (x_pred, y_pred), 1, (0,255,0), -1)  # 초록색 점
+
+                    x_gtt = int(((circle_gtt[2]+circle_gtt[0])/2) * width)
+                    y_gtt = int(((circle_gtt[1]+circle_gtt[3])/2) * height)
+                    cv2.circle(image, (x_gtt, y_gtt), 1, (0, 0, 255), -1)  # red
+
+                cv2.imwrite(f"./psi_dataset/frames_dot/{video_idd}/{frame_idd}.jpg", image)
+
+
+
+        min_bbox = torch.tensor(args.min_bbox).type(FloatTensor).to(device)
+        max_bbox = torch.tensor(args.max_bbox).type(FloatTensor).to(device)
+        traj_pred = utils.convert_unnormalize_bboxes(
+            bboxes=traj_pred,
+            normalize=args.normalize_bbox,
+            # bbox_type='ltrb' if args.bbox_type == 'cxcywh' else None,
+            bbox_type2cvt=None,
+            min_bbox=min_bbox,
+            max_bbox=max_bbox,
+        )
+        traj_gt = utils.convert_unnormalize_bboxes(
+            bboxes=traj_gt,
+            normalize=args.normalize_bbox,
+            # bbox_type='ltrb' if args.bbox_type == 'cxcywh' else None,
+            bbox_type2cvt=None,
+            min_bbox=min_bbox,
+            max_bbox=max_bbox,
+        )
+
+        
 
         for i in range(len(data['frames'])): # for each sample in a batch
             vid = data['video_id'][i]  # str list, bs x 60
@@ -167,11 +224,29 @@ def get_test_traj_gt(model, dataloader, args, dset='test'):
     model.eval()
     gt = {}
     for itern, data in enumerate(dataloader):
-        traj_pred = model(data, training=False)
-        traj_gt = data['bboxes'][:, args.observe_length:, :].type(FloatTensor)
-        # traj_gt = data['original_bboxes'][:, args.observe_length:, :].type(FloatTensor)
-        bs, ts, _ = traj_gt.shape
-        # print("Prediction: ", traj_pred.shape)
+        output = model(data, training=False)
+        traj_pred = output['traj_pred']
+        traj_gt = data['bboxes'][:, args.observe_length: , :].type(FloatTensor)
+        traj_gt = traj_gt - traj_gt[:, :1, :].type(FloatTensor)
+        
+        min_bbox = torch.tensor(args.min_bbox).type(FloatTensor).to(device)
+        max_bbox = torch.tensor(args.max_bbox).type(FloatTensor).to(device)
+        traj_pred = utils.convert_unnormalize_bboxes(
+            bboxes=traj_pred,
+            normalize=args.normalize_bbox,
+            # bbox_type='ltrb' if args.bbox_type == 'cxcywh' else None,
+            bbox_type2cvt=None,
+            min_bbox=min_bbox,
+            max_bbox=max_bbox,
+        )
+        traj_gt = utils.convert_unnormalize_bboxes(
+            bboxes=traj_gt,
+            normalize=args.normalize_bbox,
+            # bbox_type='ltrb' if args.bbox_type == 'cxcywh' else None,
+            bbox_type2cvt=None,
+            min_bbox=min_bbox,
+            max_bbox=max_bbox,
+        )
 
         for i in range(len(data['frames'])): # for each sample in a batch
             vid = data['video_id'][i]  # str list, bs x 60

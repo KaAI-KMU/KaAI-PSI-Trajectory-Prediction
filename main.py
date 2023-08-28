@@ -26,22 +26,30 @@ def main(args, config):
     ''' 2. Create models '''
     model, optimizer, scheduler = build_model(config, pretrained_path=args.pretrained_path)
 
-    # ''' 3. Train '''
-    train_traj(model, optimizer, scheduler, train_loader, val_loader, args, recorder, writer)
+    if args.pretrained_path is not None:
+        val_gt_file = './test_gt/val_traj_gt.json'
+        if not os.path.exists(val_gt_file):
+            get_test_traj_gt(model, val_loader, args, dset='val')
+        predict_traj(model, val_loader, args, dset='val')
+        score = evaluate_traj(val_gt_file, args.checkpoint_path + '/results/val_traj_pred.json', args)
 
-    val_gt_file = './test_gt/val_traj_gt.json'
-    if not os.path.exists(val_gt_file):
-        get_test_traj_gt(model, val_loader, args, dset='val')
-    predict_traj(model, val_loader, args, dset='val')
-    score = evaluate_traj(val_gt_file, args.checkpoint_path + '/results/val_traj_prediction.json', args)
+    else:
+        # ''' 3. Train '''
+        train_traj(model, optimizer, scheduler, train_loader, val_loader, args, recorder, writer)
 
-    # ''' 4. Test '''
-    # test_gt_file = './test_gt/test_traj_gt.json'
-    # if not os.path.exists('./test_gt/test_traj_gt.json'):
-    #     get_test_traj_gt(model, test_loader, args, dset='test')
-    # predict_traj(model, test_loader, args, dset='test')
-    # score = evaluate_traj(test_gt_file, args.checkpoint_path + '/results/test_traj_prediction.json', args)
-    # print("Ranking score of test set: ", score)
+        val_gt_file = './test_gt/val_traj_gt.json'
+        if not os.path.exists(val_gt_file):
+            get_test_traj_gt(model, val_loader, args, dset='val')
+        predict_traj(model, val_loader, args, dset='val')
+        score = evaluate_traj(val_gt_file, args.checkpoint_path + '/results/val_traj_prediction.json', args)
+
+        # ''' 4. Test '''
+        # test_gt_file = './test_gt/test_traj_gt.json'
+        # if not os.path.exists('./test_gt/test_traj_gt.json'):
+        #     get_test_traj_gt(model, test_loader, args, dset='test')
+        # predict_traj(model, test_loader, args, dset='test')
+        # score = evaluate_traj(test_gt_file, args.checkpoint_path + '/results/test_traj_prediction.json', args)
+        # print("Ranking score of test set: ", score)
 
 if __name__ == '__main__':
     args, cfg = get_opts()
