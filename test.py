@@ -106,7 +106,10 @@ def validate_traj(model, dataloader, args, recorder, writer):
         with torch.no_grad():
             result_dict = model(data, training=False)
         traj_pred = result_dict['traj_pred']
-        traj_gt = data['bboxes'][:, args.observe_length: , :].type(FloatTensor)
+        if args.relative_bbox:
+            traj_gt = data['bboxes'][:,args.observe_length:,:].type(FloatTensor)
+        else:
+            traj_gt = data['bboxes'][:,args.observe_length:,:].type(FloatTensor) - data['bboxes'][:,:1,:].type(FloatTensor)
 
         loss_dict = model.get_loss(data['targets'].to(device))
         traj_loss = loss_dict['traj_loss']
