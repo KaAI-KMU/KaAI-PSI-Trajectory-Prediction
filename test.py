@@ -107,7 +107,7 @@ def validate_traj(model, dataloader, args, recorder, writer):
             result_dict = model(data, training=False)
         traj_pred = result_dict['traj_pred']
         traj_gt = data['bboxes'][:, args.observe_length: , :].type(FloatTensor)
-        traj_gt = traj_gt - traj_gt[:, :1, :].type(FloatTensor)
+        traj_gt = traj_gt - data['bboxes'][:, :1, :].repeat(1, traj_gt.shape[1], 1).type(FloatTensor).cuda()
 
         loss_dict = model.get_loss(data['targets'].to(device))
         traj_loss = loss_dict['traj_loss']
