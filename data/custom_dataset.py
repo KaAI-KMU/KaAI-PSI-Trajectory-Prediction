@@ -74,7 +74,6 @@ class VideoDataset(torch.utils.data.Dataset):
             input_bboxes = input_bboxes - input_bboxes[:1, :]
 
         if 'SGNet' in self.args.model_name:
-            bboxes = bboxes - bboxes[:1, :]
             t = []
             predict_length = bboxes.shape[0] - self.args.observe_length
             for i in range(self.args.observe_length):
