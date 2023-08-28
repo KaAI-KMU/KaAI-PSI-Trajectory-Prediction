@@ -19,7 +19,9 @@ class VideoDataset(torch.utils.data.Dataset):
         self.stage = stage
         self.set_transform()
         self.flow_path = os.path.join(args.dataset_root_path, 'optical_flow')
+        self.depth_path = os.path.join(args.dataset_root_path, 'depth')
         self.use_flow = args.use_flow
+        self.use_depth = args.use_depth
         print(self.data.keys())
 
     def __getitem__(self, index):
@@ -57,8 +59,10 @@ class VideoDataset(torch.utils.data.Dataset):
 
             if self.args.task_name == 'ped_intent' or self.args.task_name == 'ped_traj':
                 bboxes[f] = [xtl, ytl, xrb, yrb]
-
+                
+        
         original_bboxes = copy.deepcopy(bboxes)
+        
         bboxes = utils.convert_normalize_bboxes(
             bboxes,
             normalize=self.args.normalize_bbox,
@@ -69,7 +73,10 @@ class VideoDataset(torch.utils.data.Dataset):
         )
 
         input_bboxes = bboxes.copy()
-        optical_features = self.load_optical_flow(video_ids, frame_list, bboxes) if self.use_flow else None
+        ego_optical_features = self.load_optical_flow(video_ids, frame_list, bboxes, cxcywh=True) if self.use_flow else None
+        optical_features = self.load_optical_flow(video_ids, frame_list, bboxes, cxcywh=False) if self.use_flow else None
+        depth_features = self.load_depth(video_ids, frame_list, bboxes) if self.use_depth else None
+        
         if self.args.relative_bbox: # False in default
             input_bboxes = input_bboxes - input_bboxes[:1, :]
 
@@ -87,6 +94,8 @@ class VideoDataset(torch.utils.data.Dataset):
             targets = t - jh
             if self.use_flow:
                 optical_features = optical_features[:self.args.observe_length]
+            if self.use_depth:
+                depth_features = depth_features[:self.args.observe_length]
             # description_features = description_features[]
         else:
             targets = torch.from_numpy(bboxes[self.args.observe_length:,:])     
@@ -113,7 +122,9 @@ class VideoDataset(torch.utils.data.Dataset):
         }
         if self.use_flow:
             data['optical_flow'] = optical_features
-        
+            data['ego_optical_flow'] = ego_optical_features
+        if self.use_depth:
+            data['depth'] = depth_features
         return data
 
     def __len__(self):
@@ -133,7 +144,7 @@ class VideoDataset(torch.utils.data.Dataset):
 
         return flo_array
     
-    def load_optical_flow(self, video_ids, frame_list, bboxes, normalized=True, cxcywh=True):
+    def load_optical_flow(self, video_ids, frame_list, bboxes, normalized=True, cxcywh=False):
         center_flows = []
         video_name = video_ids[0]
 
@@ -147,6 +158,7 @@ class VideoDataset(torch.utils.data.Dataset):
                 center_flows.append([0.0, 0.0])
                 continue
             flow_path = os.path.join(self.flow_path, video_name, f"{str(frame_id).zfill(6)}.flo")
+       
             # print(img_path)
             scene_flow = self.read_flo_file(flow_path) # numpy load로 변경
             if normalized:
@@ -155,7 +167,15 @@ class VideoDataset(torch.utils.data.Dataset):
                     cx, cy = int(cx * scene_flow.shape[1]), int(cy * scene_flow.shape[0])
                     flow = scene_flow[cy,cx]
                 else:
-                    raise NotImplementedError
+                    x1, y1, cx, cy = bbox
+                    if cx == 1:
+                        cx -= 0.000001
+                    if cy == 1:
+                        cy -= 0.000001
+                    cx, cy = int(cx * scene_flow.shape[1]), int(cy * scene_flow.shape[0])
+                    #cx, cy = int((x1 + x2) / 2 * scene_flow.shape[1]), int((y1 + y2) / 2 * scene_flow.shape[0])
+                   
+                    flow = scene_flow[cy,cx]
                 
             else:
                 raise NotImplementedError
@@ -182,6 +202,62 @@ class VideoDataset(torch.utils.data.Dataset):
         feat_list = [] if len(feat_list) < 1 else torch.stack(feat_list)
         return feat_list
             
+            
+    def read_depth_file(self, file_path):
+        """Reads a depth .npy file and returns the depth array."""
+        depth_array = np.load(file_path)
+        return depth_array
+
+
+    def load_depth(self, video_ids, frame_list, bboxes, normalized=True, cxcywh=True):
+        center_depths = []
+        video_name = video_ids[0]
+
+        for i in range(len(frame_list)):
+            frame_id = frame_list[i]
+            bbox = bboxes[i]
+
+            # 첫 번째 프레임 예외처리
+            if i == 0:
+                center_depths.append(0.0)
+                continue
+
+            depth_path = os.path.join(self.depth_path, video_name + "_depth", f"{str(frame_id).zfill(3)}_disp.npy")
+            scene_depth = self.read_depth_file(depth_path)
+            
+            if normalized:
+                if cxcywh:
+                    x1, y1, x2, y2 = bbox
+                    cx = (x1 + x2) / 2
+                    cy = (y1 + y2) / 2
+                    cx, cy = int(cx * scene_depth.shape[3]), int(cy * scene_depth.shape[2])
+                    
+                    depth = scene_depth[0, 0, cy, cx]
+                else:
+                    raise NotImplementedError
+            else:
+                raise NotImplementedError
+
+            center_depths.append(depth)
+
+        return torch.stack([torch.tensor(depth) for depth in center_depths])
+
+    
+    
+    def load_reason_features(self, video_ids, ped_ids, frame_list):
+        feat_list = []
+        video_name = video_ids[0]
+        if 'rsn' in self.args.model_name:
+            for i in range(len(frame_list)):
+                fid = frame_list[i]
+                pid = ped_ids[i]
+                local_path = os.path.join(self.args.dataset_root_path, 'features/bert_description',
+                                          video_name, pid)
+                feat_file = np.load(local_path + f'/{fid:03d}.npy')
+                feat_list.append(torch.tensor(feat_file))
+
+        feat_list = [] if len(feat_list) < 1 else torch.stack(feat_list)
+        return feat_list
             
     def load_features(self, video_ids, ped_ids, frame_list):
         global_featmaps = []
