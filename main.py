@@ -26,7 +26,7 @@ def main(args, config):
     ''' 2. Create models '''
     model, optimizer, scheduler = build_model(config, pretrained_path=args.pretrained_path)
 
-    if args.pretrained_path is not None:
+    if args.test:
         val_gt_file = './test_gt/val_traj_gt.json'
         if not os.path.exists(val_gt_file):
             get_test_traj_gt(model, val_loader, args, dset='val')

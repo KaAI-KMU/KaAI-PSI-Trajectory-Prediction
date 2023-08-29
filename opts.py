@@ -53,6 +53,8 @@ def get_opts():
                         help='Path of the pre-trained pt file')
     parser.add_argument('--visualize', action='store_true', default=False,
                         help='visualize gt&pred')
+    parser.add_argument('--test', action='store_true', default=False,
+                        help='test mode')
     
     # about models
     parser.add_argument('--backbone', type=str, default='resnet50',
