@@ -106,7 +106,7 @@ def validate_traj(model, dataloader, args, recorder, writer):
         with torch.no_grad():
             result_dict = model(data, training=False)
         traj_pred = result_dict['traj_pred']
-        if args.absolute_bbox_input:
+        if args.absolute_bbox_input: # traj_gt is relative to the first frame
             traj_gt = data['bboxes'][:,args.observe_length:,:].type(FloatTensor) - data['bboxes'][:,:1,:].type(FloatTensor)
         else:
             traj_gt = data['bboxes'][:,args.observe_length:,:].type(FloatTensor)
@@ -145,46 +145,19 @@ def validate_traj(model, dataloader, args, recorder, writer):
 def predict_traj(model, dataloader, args, dset='test'):
     model.eval()
     dt = {}
-    for itern, data in enumerate(dataloader):
+    for j, data in enumerate(dataloader):
         result_dict = model(data, training=False)
         traj_pred = result_dict['traj_pred']
-        traj_gt = data['bboxes'][:, args.observe_length: , :].type(FloatTensor)
-        traj_gtt=traj_gt
-        traj_gt = traj_gt - traj_gt[:, :1, :].type(FloatTensor)
-
-        if args.visualize:
-            for i, (paint_pred, paint_gtt) in enumerate(zip(traj_pred, traj_gtt)):
-                width = 1280
-                height = 720
-                bbox_gpu = data["bboxes"][i][0].to('cuda:0')  # GPU로 변경된 텐서
-                copy_paint_pred_gpu = paint_pred.clone().to('cuda:0')  # GPU로 변경된 예측 텐서
-                copy_paint_pred_gpu += bbox_gpu
-                
-                copy_paint_gtt_gpu = paint_gtt.clone().to('cuda:0')  # GPU로 변경된 실제값 텐서
-                
-                video_idd = data["video_id"][i]
-                ped_idd = data["ped_id"][i]
-                frame_idd = int(data["frames"][i][14]) + 1
-                image = cv2.imread(f"./psi_dataset/frames/{video_idd}/{frame_idd}.jpg")
-                
-                for circle_pred, circle_gtt in zip(copy_paint_pred_gpu, copy_paint_gtt_gpu):
-                    for itern in range(20):
-                        x_pred = int(((circle_pred[itern][2]+circle_pred[itern][0])/2) * width)
-                        y_pred = int(((circle_pred[itern][1]+circle_pred[itern][3])/2) * height)
-                        cv2.circle(image, (x_pred, y_pred), 1, (0,255,0), -1)  # 초록색 점
-
-                    x_gtt = int(((circle_gtt[2]+circle_gtt[0])/2) * width)
-                    y_gtt = int(((circle_gtt[1]+circle_gtt[3])/2) * height)
-                    cv2.circle(image, (x_gtt, y_gtt), 1, (0, 0, 255), -1)  # red
-
-                cv2.imwrite(f"./psi_dataset/frames_dot/{video_idd}/{frame_idd}.jpg", image)
+        if args.absolute_bbox_input: # traj_gt is relative to the first frame
+            traj_gt = data['bboxes'][:,args.observe_length:,:].type(FloatTensor) - data['bboxes'][:,:1,:].type(FloatTensor)
+        else:
+            traj_gt = data['bboxes'][:,args.observe_length:,:].type(FloatTensor)
 
         min_bbox = torch.tensor(args.min_bbox).type(FloatTensor).to(device)
         max_bbox = torch.tensor(args.max_bbox).type(FloatTensor).to(device)
         traj_pred = utils.convert_unnormalize_bboxes(
             bboxes=traj_pred,
             normalize=args.normalize_bbox,
-            # bbox_type='ltrb' if args.bbox_type == 'cxcywh' else None,
             bbox_type2cvt='ltrb' if args.bbox_type == 'cxcywh' else None,
             min_bbox=min_bbox,
             max_bbox=max_bbox,
@@ -192,11 +165,34 @@ def predict_traj(model, dataloader, args, dset='test'):
         traj_gt = utils.convert_unnormalize_bboxes(
             bboxes=traj_gt,
             normalize=args.normalize_bbox,
-            # bbox_type='ltrb' if args.bbox_type == 'cxcywh' else None,
             bbox_type2cvt='ltrb' if args.bbox_type == 'cxcywh' else None,
             min_bbox=min_bbox,
             max_bbox=max_bbox,
         )
+
+        if args.visualize:
+            os.makedirs(f"./psi_dataset/frames_dot/{data['video_id'][0]}", exist_ok=True)
+
+            traj_pred_abs = traj_pred + data['original_bboxes'][:,:1,:].type(FloatTensor) if args.absolute_bbox_input else traj_pred
+            traj_gt_abs = traj_gt + data['original_bboxes'][:,:1,:].type(FloatTensor) if args.absolute_bbox_input else traj_gt
+
+            traj_pred_vis = utils.convert_bbox(traj_pred_abs, bbox_type='cxcywh')
+            traj_gt_vis = utils.convert_bbox(traj_gt_abs, bbox_type='cxcywh')
+
+            for i, (single_traj_pred, single_traj_gt) in enumerate(zip(traj_pred_vis, traj_gt_vis)):
+                single_traj_pred = single_traj_pred.detach().cpu().numpy()
+                single_traj_gt = single_traj_gt.detach().cpu().numpy()
+                video_id = data["video_id"][i]
+                frame_id = int(data["frames"][i][14]) + 1
+                image = cv2.imread(f"./psi_dataset/frames/{video_id}/{frame_id:03d}.jpg")
+                for point_pred, point_gt in zip(single_traj_pred, single_traj_gt):
+                    cv2.circle(image, (int(point_pred[0]), int(point_pred[1])), 1, (0,255,0), -1)
+                    cv2.circle(image, (int(point_gt[0]), int(point_gt[1])), 1, (0,0,255), -1)
+                # draw gt bbox
+                single_traj_gt_ltrb = utils.convert_bbox(single_traj_gt, bbox_type='ltrb')
+                first_bbox = single_traj_gt_ltrb[0]
+                cv2.rectangle(image, (int(first_bbox[0]), int(first_bbox[1])), (int(first_bbox[2]), int(first_bbox[3])), (255,0,0), 1)
+                cv2.imwrite(f"./psi_dataset/frames_dot/{video_id}/{frame_id:03d}.jpg", image)
 
         for i in range(len(data['frames'])): # for each sample in a batch
             vid = data['video_id'][i]  # str list, bs x 60
