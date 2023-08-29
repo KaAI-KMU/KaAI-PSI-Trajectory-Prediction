@@ -41,7 +41,7 @@ def get_opts():
                         help='Cropping mode of cropping the pedestrian surrounding area')
     parser.add_argument('--balance_data', type=bool, default=False,
                         help='Balance data sampler with randomly class-wise weighted')
-    parser.add_argument('--bbox_type', type=bool, default='ltrb',
+    parser.add_argument('--bbox_type', type=str, default='cxcywh',
                         help='Type of bbox. [cxcywh | ltrb]')
     parser.add_argument('--normalize_bbox', type=str, default='zero-one',
                         help='If normalize bbox. [none | zero-one | plus-minus-one]')
@@ -51,20 +51,22 @@ def get_opts():
                         help='Do not load image to backbone if not necessary')
     parser.add_argument('--pretrained_path', type=str, default=None,
                         help='Path of the pre-trained pt file')
-    parser.add_argument('--visualize', type=bool, default=False,
-                        help='visulize gt&pred')
+    parser.add_argument('--visualize', action='store_true', default=False,
+                        help='visualize gt&pred')
     
     # about models
     parser.add_argument('--backbone', type=str, default='resnet50',
                         help='Backbone type [resnet50 | vgg16 | faster_rcnn]')
     parser.add_argument('--freeze_backbone', type=bool, default=False,
                         help='[True | False]')
-    parser.add_argument('--relative_bbox', action='store_true', default=True,
+    parser.add_argument('--absolute_bbox_input', action='store_true', default=False,
                         help='Use relative bbox as input')
     
     # about training
     parser.add_argument('--checkpoint_path', type=str, default='./ckpts',
                         help='Path of the stored checkpoints')
+    parser.add_argument('--extra_tag', type=str, default=None,
+                        help='extra tag of the checkpoint')
     parser.add_argument('--epochs', type=int, default=None,
                         help='Total number of training epochs')
     parser.add_argument('--batch_size', type=int, default=None,

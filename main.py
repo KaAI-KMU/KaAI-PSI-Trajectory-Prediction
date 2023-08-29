@@ -80,8 +80,11 @@ if __name__ == '__main__':
     args.min_bbox = [0, 0, 0, 0]
     # Record
     now = datetime.now()
-    time_folder = now.strftime('%Y%m%d%H%M%S')
-    args.checkpoint_path = os.path.join(args.checkpoint_path, args.task_name, cfg.dataset, cfg.model_name, time_folder)
+    if args.extra_tag is not None:
+        folder_name = args.extra_tag
+    else:
+        folder_name = now.strftime('%Y%m%d%H%M%S')
+    args.checkpoint_path = os.path.join(args.checkpoint_path, args.task_name, cfg.dataset, cfg.model_name, folder_name)
     if not os.path.exists(args.checkpoint_path):
         os.makedirs(args.checkpoint_path)
     with open(os.path.join(args.checkpoint_path, 'args.txt'), 'w') as f:

@@ -63,14 +63,14 @@ class VideoDataset(torch.utils.data.Dataset):
             bboxes,
             normalize=self.args.normalize_bbox,
             # bbox_type=None if self.args.bbox_type=='cxcywh' else 'cxcywh', # change format to cxcywh if bbox_type is ltrb
-            bbox_type2cvt=None, # change format to cxcywh if bbox_type is ltrb
+            bbox_type2cvt='cxcywh' if self.args.bbox_type == 'cxcywh' else None, # change format to cxcywh if bbox_type is ltrb
             min_bbox=np.array(self.args.min_bbox),
             max_bbox=np.array(self.args.max_bbox)
         )
 
         input_bboxes = bboxes.copy()
-        optical_features = self.load_optical_flow(video_ids, frame_list, bboxes) if self.use_flow else None
-        if self.args.relative_bbox: # False in default
+        optical_features = self.load_optical_flow(video_ids, frame_list, bboxes, bbox_type=self.args.bbox_type) if self.use_flow else None
+        if not self.args.absolute_bbox_input:
             input_bboxes = input_bboxes - input_bboxes[:1, :]
 
         if 'SGNet' in self.args.model_name:
@@ -132,7 +132,7 @@ class VideoDataset(torch.utils.data.Dataset):
 
         return flo_array
     
-    def load_optical_flow(self, video_ids, frame_list, bboxes, normalized=True, cxcywh=True):
+    def load_optical_flow(self, video_ids, frame_list, bboxes, normalized=True, bbox_type='cxcywh'):
         center_flows = []
         video_name = video_ids[0]
 
@@ -149,9 +149,14 @@ class VideoDataset(torch.utils.data.Dataset):
             # print(img_path)
             scene_flow = self.read_flo_file(flow_path) # numpy load로 변경
             if normalized:
-                if cxcywh:
+                if bbox_type == 'cxcywh':
                     cx, cy, _, _ = bbox
-                    cx, cy = int(cx * scene_flow.shape[1]), int(cy * scene_flow.shape[0])
+                    cx, cy = int(cx * (scene_flow.shape[1]-1)), int(cy * (scene_flow.shape[0]-1))
+                    flow = scene_flow[cy,cx]
+                elif bbox_type == 'ltrb':
+                    x1, y1, x2, y2 = bbox
+                    cx, cy = int((x1+x2)/2), int((y1+y2)/2)
+                    cx, cy = int(cx * (scene_flow.shape[1]-1)), int(cy * (scene_flow.shape[0]-1))
                     flow = scene_flow[cy,cx]
                 else:
                     raise NotImplementedError

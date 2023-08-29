@@ -106,10 +106,10 @@ def validate_traj(model, dataloader, args, recorder, writer):
         with torch.no_grad():
             result_dict = model(data, training=False)
         traj_pred = result_dict['traj_pred']
-        if args.relative_bbox:
-            traj_gt = data['bboxes'][:,args.observe_length:,:].type(FloatTensor)
-        else:
+        if args.absolute_bbox_input:
             traj_gt = data['bboxes'][:,args.observe_length:,:].type(FloatTensor) - data['bboxes'][:,:1,:].type(FloatTensor)
+        else:
+            traj_gt = data['bboxes'][:,args.observe_length:,:].type(FloatTensor)
 
         loss_dict = model.get_loss(data['targets'].to(device))
         traj_loss = loss_dict['traj_loss']
@@ -121,7 +121,7 @@ def validate_traj(model, dataloader, args, recorder, writer):
             bboxes=traj_pred,
             normalize=args.normalize_bbox,
             # bbox_type='ltrb' if args.bbox_type == 'cxcywh' else None,
-            bbox_type2cvt=None,
+            bbox_type2cvt='ltrb' if args.bbox_type == 'cxcywh' else None,
             min_bbox=min_bbox,
             max_bbox=max_bbox,
         )
@@ -129,7 +129,7 @@ def validate_traj(model, dataloader, args, recorder, writer):
             bboxes=traj_gt,
             normalize=args.normalize_bbox,
             # bbox_type='ltrb' if args.bbox_type == 'cxcywh' else None,
-            bbox_type2cvt=None,
+            bbox_type2cvt='ltrb' if args.bbox_type == 'cxcywh' else None,
             min_bbox=min_bbox,
             max_bbox=max_bbox,
         )
