@@ -73,17 +73,13 @@ class VideoDataset(torch.utils.data.Dataset):
         )
 
         input_bboxes = bboxes.copy()
-<<<<<<< HEAD
         ego_optical_features = self.load_optical_flow(video_ids, frame_list, bboxes, cxcywh=True) if self.use_flow else None
         optical_features = self.load_optical_flow(video_ids, frame_list, bboxes, cxcywh=False) if self.use_flow else None
         depth_features = self.load_depth(video_ids, frame_list, bboxes) if self.use_depth else None
         
-        if self.args.relative_bbox: # False in default
-=======
         absolute_bboxes = bboxes.copy()
         optical_features = self.load_optical_flow(video_ids, frame_list, bboxes, bbox_type=self.args.bbox_type) if self.use_flow else None
         if not self.args.absolute_bbox_input:
->>>>>>> 2584658b93462d72125b3f38b3049f4112c885fc
             input_bboxes = input_bboxes - input_bboxes[:1, :]
 
         if 'SGNet' in self.args.model_name:
@@ -150,11 +146,7 @@ class VideoDataset(torch.utils.data.Dataset):
 
         return flo_array
     
-<<<<<<< HEAD
-    def load_optical_flow(self, video_ids, frame_list, bboxes, normalized=True, cxcywh=False):
-=======
     def load_optical_flow(self, video_ids, frame_list, bboxes, normalized=True, bbox_type='cxcywh'):
->>>>>>> 2584658b93462d72125b3f38b3049f4112c885fc
         center_flows = []
         video_name = video_ids[0]
 
