@@ -17,11 +17,14 @@ model_cfg:
 
 optimization:
         batch_size: 128
-        num_epochs: 50
+        num_epochs: 25
 
         optimizer: Adam
         lr: 0.001
         weight_decay: 0.0
 
 lr_scheduler:
-        scheduler: none
+        scheduler: ReduceLROnPlateau
+        factor: 0.2
+        patience: 5
+        min_lr: 0.0000000001 # 1e-10

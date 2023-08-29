@@ -26,11 +26,11 @@ model_cfg:
         enc_steps: 15
         dec_steps: 45
         dropout: 0.0
-        K: 20
+        K: 1
 
 optimization:
         batch_size: 16
-        num_epochs: 50
+        num_epochs: 25
 
         optimizer: Adam
         lr: 0.0005

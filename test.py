@@ -1,7 +1,8 @@
 import os
 import torch
 import json
-
+import cv2
+from opts import get_opts
 from tqdm import tqdm
 
 from utils import utils
@@ -10,6 +11,12 @@ cuda = True if torch.cuda.is_available() else False
 device = torch.device("cuda:0" if cuda else "cpu")
 FloatTensor = torch.cuda.FloatTensor if cuda else torch.FloatTensor
 LongTensor = torch.cuda.LongTensor if cuda else torch.LongTensor
+args, cfg = get_opts()
+
+# colors = [(0, 0, 255), (0, 255, 255), (0, 255, 0), (255, 0, 0), (255, 0, 255),
+#           (0, 102, 153), (255, 255, 0), (255, 255, 255), (153, 153, 255), (255, 0, 255),
+#           (128, 0, 255), (0, 0, 255), (0, 128, 255), (0, 255, 255), (0, 255, 0),
+#           (128, 255, 0), (255, 255, 0), (255, 128, 0), (255, 0, 0), (255, 0, 128)]
 
 def validate_intent(epoch, model, dataloader, args, recorder, writer):
     model.eval()
@@ -99,8 +106,10 @@ def validate_traj(model, dataloader, args, recorder, writer):
         with torch.no_grad():
             result_dict = model(data, training=False)
         traj_pred = result_dict['traj_pred']
-        traj_gt = data['bboxes'][:, args.observe_length: , :].type(FloatTensor)
-        traj_gt = traj_gt - traj_gt[:, :1, :].type(FloatTensor)
+        if args.absolute_bbox_input: # traj_gt is relative to the first frame
+            traj_gt = data['bboxes'][:,args.observe_length:,:].type(FloatTensor) - data['bboxes'][:,:1,:].type(FloatTensor)
+        else:
+            traj_gt = data['bboxes'][:,args.observe_length:,:].type(FloatTensor)
 
         loss_dict = model.get_loss(data['targets'].to(device))
         traj_loss = loss_dict['traj_loss']
@@ -112,7 +121,7 @@ def validate_traj(model, dataloader, args, recorder, writer):
             bboxes=traj_pred,
             normalize=args.normalize_bbox,
             # bbox_type='ltrb' if args.bbox_type == 'cxcywh' else None,
-            bbox_type2cvt=None,
+            bbox_type2cvt='ltrb' if args.bbox_type == 'cxcywh' else None,
             min_bbox=min_bbox,
             max_bbox=max_bbox,
         )
@@ -120,7 +129,7 @@ def validate_traj(model, dataloader, args, recorder, writer):
             bboxes=traj_gt,
             normalize=args.normalize_bbox,
             # bbox_type='ltrb' if args.bbox_type == 'cxcywh' else None,
-            bbox_type2cvt=None,
+            bbox_type2cvt='ltrb' if args.bbox_type == 'cxcywh' else None,
             min_bbox=min_bbox,
             max_bbox=max_bbox,
         )
@@ -136,13 +145,54 @@ def validate_traj(model, dataloader, args, recorder, writer):
 def predict_traj(model, dataloader, args, dset='test'):
     model.eval()
     dt = {}
-    for itern, data in enumerate(dataloader):
+    for j, data in enumerate(dataloader):
         result_dict = model(data, training=False)
         traj_pred = result_dict['traj_pred']
-        # traj_gt = data['original_bboxes'][:, args.observe_length:, :].type(FloatTensor)
-        traj_gt = data['bboxes'][:, args.observe_length:, :].type(FloatTensor)
-        bs, ts, _ = traj_gt.shape
-        # print("Prediction: ", traj_pred.shape)
+        if args.absolute_bbox_input: # traj_gt is relative to the first frame
+            traj_gt = data['bboxes'][:,args.observe_length:,:].type(FloatTensor) - data['bboxes'][:,:1,:].type(FloatTensor)
+        else:
+            traj_gt = data['bboxes'][:,args.observe_length:,:].type(FloatTensor)
+
+        min_bbox = torch.tensor(args.min_bbox).type(FloatTensor).to(device)
+        max_bbox = torch.tensor(args.max_bbox).type(FloatTensor).to(device)
+        traj_pred = utils.convert_unnormalize_bboxes(
+            bboxes=traj_pred,
+            normalize=args.normalize_bbox,
+            bbox_type2cvt='ltrb' if args.bbox_type == 'cxcywh' else None,
+            min_bbox=min_bbox,
+            max_bbox=max_bbox,
+        )
+        traj_gt = utils.convert_unnormalize_bboxes(
+            bboxes=traj_gt,
+            normalize=args.normalize_bbox,
+            bbox_type2cvt='ltrb' if args.bbox_type == 'cxcywh' else None,
+            min_bbox=min_bbox,
+            max_bbox=max_bbox,
+        )
+
+        if args.visualize:
+            os.makedirs(f"./psi_dataset/frames_dot/{data['video_id'][0]}", exist_ok=True)
+
+            traj_pred_abs = traj_pred + data['original_bboxes'][:,:1,:].type(FloatTensor) if args.absolute_bbox_input else traj_pred
+            traj_gt_abs = traj_gt + data['original_bboxes'][:,:1,:].type(FloatTensor) if args.absolute_bbox_input else traj_gt
+
+            traj_pred_vis = utils.convert_bbox(traj_pred_abs, bbox_type='cxcywh')
+            traj_gt_vis = utils.convert_bbox(traj_gt_abs, bbox_type='cxcywh')
+
+            for i, (single_traj_pred, single_traj_gt) in enumerate(zip(traj_pred_vis, traj_gt_vis)):
+                single_traj_pred = single_traj_pred.detach().cpu().numpy()
+                single_traj_gt = single_traj_gt.detach().cpu().numpy()
+                video_id = data["video_id"][i]
+                frame_id = int(data["frames"][i][14]) + 1
+                image = cv2.imread(f"./psi_dataset/frames/{video_id}/{frame_id:03d}.jpg")
+                for point_pred, point_gt in zip(single_traj_pred, single_traj_gt):
+                    cv2.circle(image, (int(point_pred[0]), int(point_pred[1])), 1, (0,255,0), -1)
+                    cv2.circle(image, (int(point_gt[0]), int(point_gt[1])), 1, (0,0,255), -1)
+                # draw gt bbox
+                single_traj_gt_ltrb = utils.convert_bbox(single_traj_gt, bbox_type='ltrb')
+                first_bbox = single_traj_gt_ltrb[0]
+                cv2.rectangle(image, (int(first_bbox[0]), int(first_bbox[1])), (int(first_bbox[2]), int(first_bbox[3])), (255,0,0), 1)
+                cv2.imwrite(f"./psi_dataset/frames_dot/{video_id}/{frame_id:03d}.jpg", image)
 
         for i in range(len(data['frames'])): # for each sample in a batch
             vid = data['video_id'][i]  # str list, bs x 60
@@ -167,11 +217,31 @@ def get_test_traj_gt(model, dataloader, args, dset='test'):
     model.eval()
     gt = {}
     for itern, data in enumerate(dataloader):
-        traj_pred = model(data, training=False)
-        traj_gt = data['bboxes'][:, args.observe_length:, :].type(FloatTensor)
-        # traj_gt = data['original_bboxes'][:, args.observe_length:, :].type(FloatTensor)
-        bs, ts, _ = traj_gt.shape
-        # print("Prediction: ", traj_pred.shape)
+        output = model(data, training=False)
+        traj_pred = output['traj_pred']
+        if args.absolute_bbox_input:
+            traj_gt = data['bboxes'][:,args.observe_length:,:].type(FloatTensor) - data['bboxes'][:,:1,:].type(FloatTensor)
+        else:
+            traj_gt = data['bboxes'][:,args.observe_length:,:].type(FloatTensor)
+        
+        min_bbox = torch.tensor(args.min_bbox).type(FloatTensor).to(device)
+        max_bbox = torch.tensor(args.max_bbox).type(FloatTensor).to(device)
+        traj_pred = utils.convert_unnormalize_bboxes(
+            bboxes=traj_pred,
+            normalize=args.normalize_bbox,
+            # bbox_type='ltrb' if args.bbox_type == 'cxcywh' else None,
+            bbox_type2cvt='ltrb' if args.bbox_type == 'cxcywh' else None,
+            min_bbox=min_bbox,
+            max_bbox=max_bbox,
+        )
+        traj_gt = utils.convert_unnormalize_bboxes(
+            bboxes=traj_gt,
+            normalize=args.normalize_bbox,
+            # bbox_type='ltrb' if args.bbox_type == 'cxcywh' else None,
+            bbox_type2cvt='ltrb' if args.bbox_type == 'cxcywh' else None,
+            min_bbox=min_bbox,
+            max_bbox=max_bbox,
+        )
 
         for i in range(len(data['frames'])): # for each sample in a batch
             vid = data['video_id'][i]  # str list, bs x 60

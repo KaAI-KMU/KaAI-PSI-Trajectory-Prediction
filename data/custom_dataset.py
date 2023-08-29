@@ -67,21 +67,26 @@ class VideoDataset(torch.utils.data.Dataset):
             bboxes,
             normalize=self.args.normalize_bbox,
             # bbox_type=None if self.args.bbox_type=='cxcywh' else 'cxcywh', # change format to cxcywh if bbox_type is ltrb
-            bbox_type2cvt=None, # change format to cxcywh if bbox_type is ltrb
+            bbox_type2cvt='cxcywh' if self.args.bbox_type == 'cxcywh' else None, # change format to cxcywh if bbox_type is ltrb
             min_bbox=np.array(self.args.min_bbox),
             max_bbox=np.array(self.args.max_bbox)
         )
 
         input_bboxes = bboxes.copy()
+<<<<<<< HEAD
         ego_optical_features = self.load_optical_flow(video_ids, frame_list, bboxes, cxcywh=True) if self.use_flow else None
         optical_features = self.load_optical_flow(video_ids, frame_list, bboxes, cxcywh=False) if self.use_flow else None
         depth_features = self.load_depth(video_ids, frame_list, bboxes) if self.use_depth else None
         
         if self.args.relative_bbox: # False in default
+=======
+        absolute_bboxes = bboxes.copy()
+        optical_features = self.load_optical_flow(video_ids, frame_list, bboxes, bbox_type=self.args.bbox_type) if self.use_flow else None
+        if not self.args.absolute_bbox_input:
+>>>>>>> 2584658b93462d72125b3f38b3049f4112c885fc
             input_bboxes = input_bboxes - input_bboxes[:1, :]
 
         if 'SGNet' in self.args.model_name:
-            bboxes = bboxes - bboxes[:1, :]
             t = []
             predict_length = bboxes.shape[0] - self.args.observe_length
             for i in range(self.args.observe_length):
@@ -106,6 +111,7 @@ class VideoDataset(torch.utils.data.Dataset):
             'local_featmaps': local_featmaps,
             'global_featmaps': global_featmaps,
             'original_bboxes': original_bboxes, # bboxes before normalization
+            'absolute_bboxes': absolute_bboxes,
             'bboxes': input_bboxes,
             # 'intention_onehot': intention_onehot,
             'intention_binary': intention_binary,
@@ -144,7 +150,11 @@ class VideoDataset(torch.utils.data.Dataset):
 
         return flo_array
     
+<<<<<<< HEAD
     def load_optical_flow(self, video_ids, frame_list, bboxes, normalized=True, cxcywh=False):
+=======
+    def load_optical_flow(self, video_ids, frame_list, bboxes, normalized=True, bbox_type='cxcywh'):
+>>>>>>> 2584658b93462d72125b3f38b3049f4112c885fc
         center_flows = []
         video_name = video_ids[0]
 
@@ -162,9 +172,14 @@ class VideoDataset(torch.utils.data.Dataset):
             # print(img_path)
             scene_flow = self.read_flo_file(flow_path) # numpy load로 변경
             if normalized:
-                if cxcywh:
+                if bbox_type == 'cxcywh':
                     cx, cy, _, _ = bbox
-                    cx, cy = int(cx * scene_flow.shape[1]), int(cy * scene_flow.shape[0])
+                    cx, cy = int(cx * (scene_flow.shape[1]-1)), int(cy * (scene_flow.shape[0]-1))
+                    flow = scene_flow[cy,cx]
+                elif bbox_type == 'ltrb':
+                    x1, y1, x2, y2 = bbox
+                    cx, cy = int((x1+x2)/2), int((y1+y2)/2)
+                    cx, cy = int(cx * (scene_flow.shape[1]-1)), int(cy * (scene_flow.shape[0]-1))
                     flow = scene_flow[cy,cx]
                 else:
                     x1, y1, cx, cy = bbox
