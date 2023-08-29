@@ -147,9 +147,9 @@ class SGNetTrajBbox(ModelTemplate):
             dec_hidden = self.enc_to_dec_hidden(enc_hidden)
 
             goal_for_dec, goal_for_enc, goal_traj = self.SGE(goal_hidden)
-            if additional_dict is not None:
+            if additional_dict is not None and False:
                 additional_dict_single = {k: v[:,enc_step,:] for k, v in additional_dict.items()}
-            dec_traj = self.decoder(dec_hidden, goal_for_dec, additional_dict_single)
+            dec_traj = self.decoder(dec_hidden, goal_for_dec, additional_dict)
 
             # output 
             all_goal_traj[:,enc_step,:,:] = goal_traj
@@ -167,10 +167,12 @@ class SGNetTrajBbox(ModelTemplate):
         if self.use_speed:
             speed = data['speed'][:, :self.observe_length, :].to(device).type(FloatTensor)
             speed_input = self.speed_module(speed)
+            speed_input = self.speed_fc(speed_input.permute(0,2,1)).permute(0,2,1).reshape(-1,speed_input.shape[-1])
             additional_dict['speed_input'] = speed_input
         if self.use_flow:
             flow = data['optical_flow'][:, :self.observe_length, :].to(device).type(FloatTensor)
             flow_input = self.flow_module(flow)
+            flow_input = self.flow_fc(flow_input.permute(0,2,1)).permute(0,2,1).reshape(-1,flow_input.shape[-1])
             additional_dict['flow_input'] = flow_input
 
         all_goal_traj, all_dec_traj = self.encoder(traj_input, additional_dict)
