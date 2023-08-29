@@ -33,6 +33,11 @@ def train_traj(model, optimizer, scheduler, train_loader, val_loader, args, reco
                 best_val_score = val_score
                 torch.save(model.state_dict(), args.checkpoint_path + f'/best.pth')
 
+        if args.save_all_cheakpoint:
+            torch.save(model.state_dict(), args.checkpoint_path + f'/epoch_{epoch}.pth')
+        else:
+            torch.save(model.state_dict(), args.checkpoint_path + f'/latest.pth')
+
         if isinstance(scheduler, torch.optim.lr_scheduler.ReduceLROnPlateau):
             scheduler.step(val_loss)
         elif isinstance(scheduler, torch.optim.lr_scheduler.ExponentialLR):
@@ -42,8 +47,7 @@ def train_traj(model, optimizer, scheduler, train_loader, val_loader, args, reco
         else:
             raise NotImplementedError
 
-        torch.save(model.state_dict(), args.checkpoint_path + f'/latest.pth')
-
+    
 
 def train_traj_epoch(epoch, model, optimizer, epoch_loss, dataloader, args, recorder, writer):
     model.train()
