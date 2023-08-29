@@ -234,7 +234,7 @@ def get_test_traj_gt(model, dataloader, args, dset='test'):
             bboxes=traj_pred,
             normalize=args.normalize_bbox,
             # bbox_type='ltrb' if args.bbox_type == 'cxcywh' else None,
-            bbox_type2cvt=None,
+            bbox_type2cvt='ltrb' if args.bbox_type == 'cxcywh' else None,
             min_bbox=min_bbox,
             max_bbox=max_bbox,
         )
@@ -242,7 +242,7 @@ def get_test_traj_gt(model, dataloader, args, dset='test'):
             bboxes=traj_gt,
             normalize=args.normalize_bbox,
             # bbox_type='ltrb' if args.bbox_type == 'cxcywh' else None,
-            bbox_type2cvt=None,
+            bbox_type2cvt='ltrb' if args.bbox_type == 'cxcywh' else None,
             min_bbox=min_bbox,
             max_bbox=max_bbox,
         )
