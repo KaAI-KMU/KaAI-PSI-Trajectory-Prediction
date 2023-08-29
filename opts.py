@@ -55,6 +55,8 @@ def get_opts():
                         help='visualize gt&pred')
     parser.add_argument('--test', action='store_true', default=False,
                         help='test mode')
+    parser.add_argument('--save_all_checkpoint', action='store_true', default=False,
+                        help='save all checkpoint')
     
     # about models
     parser.add_argument('--backbone', type=str, default='resnet50',
