@@ -69,6 +69,7 @@ class VideoDataset(torch.utils.data.Dataset):
         )
 
         input_bboxes = bboxes.copy()
+        absolute_bboxes = bboxes.copy()
         optical_features = self.load_optical_flow(video_ids, frame_list, bboxes, bbox_type=self.args.bbox_type) if self.use_flow else None
         if not self.args.absolute_bbox_input:
             input_bboxes = input_bboxes - input_bboxes[:1, :]
@@ -96,6 +97,7 @@ class VideoDataset(torch.utils.data.Dataset):
             'local_featmaps': local_featmaps,
             'global_featmaps': global_featmaps,
             'original_bboxes': original_bboxes, # bboxes before normalization
+            'absolute_bboxes': absolute_bboxes,
             'bboxes': input_bboxes,
             # 'intention_onehot': intention_onehot,
             'intention_binary': intention_binary,
