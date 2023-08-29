@@ -228,8 +228,10 @@ def get_test_traj_gt(model, dataloader, args, dset='test'):
     for itern, data in enumerate(dataloader):
         output = model(data, training=False)
         traj_pred = output['traj_pred']
-        traj_gt = data['bboxes'][:, args.observe_length: , :].type(FloatTensor)
-        traj_gt = traj_gt - traj_gt[:, :1, :].type(FloatTensor)
+        if args.absolute_bbox_input:
+            traj_gt = data['bboxes'][:,args.observe_length:,:].type(FloatTensor) - data['bboxes'][:,:1,:].type(FloatTensor)
+        else:
+            traj_gt = data['bboxes'][:,args.observe_length:,:].type(FloatTensor)
         
         min_bbox = torch.tensor(args.min_bbox).type(FloatTensor).to(device)
         max_bbox = torch.tensor(args.max_bbox).type(FloatTensor).to(device)
