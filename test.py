@@ -152,7 +152,6 @@ def predict_traj(model, dataloader, args, dset='test'):
         traj_gtt=traj_gt
         traj_gt = traj_gt - traj_gt[:, :1, :].type(FloatTensor)
 
-
         if args.visualize:
             for i, (paint_pred, paint_gtt) in enumerate(zip(traj_pred, traj_gtt)):
                 width = 1280
@@ -180,15 +179,13 @@ def predict_traj(model, dataloader, args, dset='test'):
 
                 cv2.imwrite(f"./psi_dataset/frames_dot/{video_idd}/{frame_idd}.jpg", image)
 
-
-
         min_bbox = torch.tensor(args.min_bbox).type(FloatTensor).to(device)
         max_bbox = torch.tensor(args.max_bbox).type(FloatTensor).to(device)
         traj_pred = utils.convert_unnormalize_bboxes(
             bboxes=traj_pred,
             normalize=args.normalize_bbox,
             # bbox_type='ltrb' if args.bbox_type == 'cxcywh' else None,
-            bbox_type2cvt=None,
+            bbox_type2cvt='ltrb' if args.bbox_type == 'cxcywh' else None,
             min_bbox=min_bbox,
             max_bbox=max_bbox,
         )
@@ -196,12 +193,10 @@ def predict_traj(model, dataloader, args, dset='test'):
             bboxes=traj_gt,
             normalize=args.normalize_bbox,
             # bbox_type='ltrb' if args.bbox_type == 'cxcywh' else None,
-            bbox_type2cvt=None,
+            bbox_type2cvt='ltrb' if args.bbox_type == 'cxcywh' else None,
             min_bbox=min_bbox,
             max_bbox=max_bbox,
         )
-
-        
 
         for i in range(len(data['frames'])): # for each sample in a batch
             vid = data['video_id'][i]  # str list, bs x 60
