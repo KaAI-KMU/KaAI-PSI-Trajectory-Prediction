@@ -19,6 +19,7 @@ class SGNetCVAETrajBbox(ModelTemplate):
         super(SGNetCVAETrajBbox, self).__init__()
         self.cvae = BiTraPNP(model_cfg.cvae)
         self.observe_length = model_cfg.observe_length
+        self.predict_length = model_cfg.predict_length
         self.hidden_size = model_cfg.hidden_size # GRU hidden size
         self.enc_steps = model_cfg.enc_steps # observation step
         self.dec_steps = model_cfg.dec_steps # prediction step
@@ -180,6 +181,7 @@ class SGNetCVAETrajBbox(ModelTemplate):
         return all_goal_traj, all_cvae_dec_traj, total_KLD, total_probabilities
             
     def forward(self, data, training=True):
+        absolute_bboxes = data['absolute_bboxes'].to(device).type(FloatTensor)
         bboxes = data['bboxes'][:,:self.observe_length,:].to(device).type(FloatTensor)
         targets = data['targets'].to(device).type(FloatTensor)
         self.training = training
@@ -204,7 +206,10 @@ class SGNetCVAETrajBbox(ModelTemplate):
         self.forward_ret_dict['all_cvae_dec_traj'] = all_cvae_dec_traj
         self.forward_ret_dict['KLD'] = KLD
         self.forward_ret_dict['total_probabilities'] = total_probabilities
-        self.forward_ret_dict['traj_pred'] = all_cvae_dec_traj[:,-1,:,-1,:] # K=1
+        traj_pred = all_cvae_dec_traj[:,-1,:,-1,:]
+        traj_pred += absolute_bboxes[:,self.observe_length-1,:].unsqueeze(1).repeat(1,traj_pred.shape[1],1)
+        traj_pred -= absolute_bboxes[:,0,:].unsqueeze(1).repeat(1,traj_pred.shape[1],1)
+        self.forward_ret_dict['traj_pred'] = traj_pred
 
         return self.forward_ret_dict
     

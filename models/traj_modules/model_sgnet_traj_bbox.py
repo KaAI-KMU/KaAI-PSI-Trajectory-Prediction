@@ -17,6 +17,7 @@ class SGNetTrajBbox(ModelTemplate):
         super(SGNetTrajBbox, self).__init__()
 
         self.observe_length = model_cfg.observe_length
+        self.predict_length = model_cfg.predict_length
         self.hidden_size = model_cfg.hidden_size
         self.enc_steps = model_cfg.enc_steps
         self.dec_steps = model_cfg.dec_steps
@@ -124,6 +125,7 @@ class SGNetTrajBbox(ModelTemplate):
             if additional_dict is not None:
                 for k, input_features in additional_dict.items():
                     dec_input = torch.cat((dec_input, input_features), dim=-1)
+            dec_hidden = self.dec_cell(dec_input, dec_hidden)
             # regress dec traj for loss
             dec_traj[:,dec_step,:] = self.regressor(dec_hidden)
         return dec_traj
@@ -158,6 +160,7 @@ class SGNetTrajBbox(ModelTemplate):
 
     def forward(self, data, training=True):
         bboxes = data['bboxes'][:,:self.observe_length,:].to(device).type(FloatTensor)
+        absolute_bboxes = data['absolute_bboxes'].to(device).type(FloatTensor)
 
         traj_input = self.bbox_module(bboxes)
         additional_dict = {}
@@ -174,7 +177,11 @@ class SGNetTrajBbox(ModelTemplate):
 
         self.forward_ret_dict['all_goal_traj'] = all_goal_traj
         self.forward_ret_dict['all_dec_traj'] = all_dec_traj
-        self.forward_ret_dict['traj_pred'] = all_dec_traj[:,-1,:,:]
+
+        traj_pred = all_dec_traj[:,-1,:,:]
+        traj_pred += absolute_bboxes[:,self.observe_length-1,:].unsqueeze(1).repeat(1,traj_pred.shape[1],1)
+        traj_pred -= absolute_bboxes[:,0,:].unsqueeze(1).repeat(1,traj_pred.shape[1],1)
+        self.forward_ret_dict['traj_pred'] = traj_pred        
         return self.forward_ret_dict
     
     def get_loss(self, targets):
