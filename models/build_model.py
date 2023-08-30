@@ -2,6 +2,7 @@ import torch
 from .traj_modules.model_sgnet_cvae_traj_bbox import SGNetCVAETrajBbox
 from .traj_modules.model_sgnet_traj_bbox import SGNetTrajBbox
 from .traj_modules.model_lstm_traj_bbox import LSTMTrajBbox
+from .traj_modules.model_gru_traj_bbox import  GRUTrajBbox
 
 cuda = True if torch.cuda.is_available() else False
 device = torch.device("cuda:0" if cuda else "cpu")
@@ -12,6 +13,7 @@ __all__ = {
     'SGNetTrajBbox': SGNetTrajBbox,
     'SGNetCVAETrajBbox': SGNetCVAETrajBbox,
     'LSTMTrajBbox': LSTMTrajBbox,
+    'GRUTrajBbox': GRUTrajBbox,
 }
 def build_model(config, pretrained_path=None):
     model = __all__[config.model_name](model_cfg=config.model_cfg, dataset=config.dataset).to(device)
