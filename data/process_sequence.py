@@ -23,7 +23,7 @@ def generate_data_sequence(set_name, database, args):
             pids_seq.append([ped] * n)
             video_seq.append([video] * n)
             intents, probs, disgrs, descripts = get_intent(database, video, ped, args)
-            speed = database[video][ped]['cv_annotations']['speed']
+            speed = database[video][ped]['cv_annotations'].get('speed', None)
             intention_prob.append(probs)
             intention_binary.append(intents)
             disagree_score_seq.append(disgrs)
