@@ -1,0 +1,41 @@
+model_name: SGNetTrajBbox
+dataset: PSI2.0
+
+model_cfg:
+        observe_length: 15
+        predict_length: 45
+
+        bbox_module:
+                input_dim: 4
+                output_dim: 256
+
+        flow_module:
+                input_dim: 2
+                output_dim: 256
+
+        pred_dim: 4
+        hidden_size: 512
+        enc_steps: 15
+        dec_steps: 45
+        dropout: 0.0
+
+optimization:
+        batch_size: 8
+        num_epochs: 25
+
+        optimizer: Adam
+        lr: 0.000001
+        weight_decay: 0.0
+
+# lr_scheduler:
+#         scheduler: CosineAnealingWarmUpRestarts
+#         T_0: 10
+#         T_mult: 2
+#         eta_max: 0.0005
+#         T_up: 2
+#         gamma: 0.5
+
+lr_scheduler:
+        scheduler: stepLR
+        step_size: 7
+        gamma: 0.2
