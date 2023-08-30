@@ -78,7 +78,7 @@ class VideoDataset(torch.utils.data.Dataset):
 
         input_bboxes = bboxes.copy()
         if self.use_flow:
-            if self.args.gen_center_of and False:
+            if self.args.gen_center_of:
                 optical_features = self.load_optical_flow_(video_ids, frame_list, bboxes, bbox_type=self.args.bbox_type)
             else:
                 optical_features = self.load_optical_flow(video_ids, frame_list, ped_ids[0])
