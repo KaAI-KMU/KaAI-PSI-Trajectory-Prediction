@@ -125,6 +125,10 @@ def get_opts():
         args.use_flow = True
     else:
         args.use_flow = False
+    if cfg.model_cfg.get('speed_module', None) is not None:
+        args.use_speed = True
+    else:
+        args.use_speed = False
 
     args.observe_length = cfg.model_cfg.observe_length
     args.predict_length = cfg.model_cfg.predict_length

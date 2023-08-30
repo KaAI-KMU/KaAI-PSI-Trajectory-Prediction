@@ -29,7 +29,8 @@ class VideoDataset(torch.utils.data.Dataset):
         assert ped_ids[0] == ped_ids[-1]  # all video_id should be the same
         frame_list = self.data['frame'][index][:self.args.observe_length] # return first 15 frames as observed
         bboxes = self.data['bbox'][index] # return all 60 frames #[:-1] # take first 15 frames as input
-        speed = self.data['speed'][index]
+        speed = self.data.get('speed',None)
+        speed = speed[index] if speed is not None else None
             
         intention_binary = self.data['intention_binary'][index] # all frames intentions are returned
         intention_prob = self.data['intention_prob'][index] # all frames, 3-dimension votes probability
