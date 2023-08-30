@@ -34,7 +34,10 @@ class VideoDataset(torch.utils.data.Dataset):
         frame_list = self.data['frame'][index][:self.args.observe_length] # return first 15 frames as observed
         bboxes = self.data['bbox'][index] # return all 60 frames #[:-1] # take first 15 frames as input
         speed = self.data.get('speed',None)
-        speed = speed[index] if speed is not None else None
+        if speed is None or True:
+            speed = self.get_speed_for_video_frame(frame_list, video_ids[0]).unsqueeze(1) #frame_list, video_name, frame_id
+        else:
+            speed = speed[index]
             
         intention_binary = self.data['intention_binary'][index] # all frames intentions are returned
         intention_prob = self.data['intention_prob'][index] # all frames, 3-dimension votes probability
@@ -79,7 +82,6 @@ class VideoDataset(torch.utils.data.Dataset):
                 optical_features = self.load_optical_flow_(video_ids, frame_list, bboxes, bbox_type=self.args.bbox_type)
             else:
                 optical_features = self.load_optical_flow(video_ids, frame_list, ped_ids[0])
-                optical_features1 = self.load_optical_flow_(video_ids, frame_list, bboxes, bbox_type=self.args.bbox_type)
 
         else:
             optical_features = None
@@ -189,6 +191,25 @@ class VideoDataset(torch.utils.data.Dataset):
 
             center_flows.append(flow)
         return torch.stack([torch.tensor(flow) for flow in center_flows])
+    
+    def get_speed_for_video_frame(self, frame_list, video_name):
+        speeds = []
+
+        # Load the speed values for the specific video from the .npy file
+        speed_file_path = os.path.join(self.args.dataset_root_path,'speed', video_name, 'speed.npy')
+        
+        if not os.path.exists(speed_file_path):
+            # Default value when file does not exist
+            return torch.tensor([0.0] * len(frame_list))
+
+        speed_values = np.load(speed_file_path)
+
+        for frame_id in frame_list:
+            # The frame_id is expected to match the index in the speed_values
+            # If the frame_id exceeds the length of speed_values, use default speed of 0.0
+            speeds.append(speed_values[frame_id] if frame_id < len(speed_values) else 0.0)
+
+        return torch.tensor(speeds)
     
     def load_optical_flow(self, video_ids, frame_list, track_ids):
         center_flows = []
