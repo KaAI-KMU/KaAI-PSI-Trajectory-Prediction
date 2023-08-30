@@ -72,7 +72,7 @@ class VideoDataset(torch.utils.data.Dataset):
         )
 
         input_bboxes = bboxes.copy()
-        optical_features = self.load_optical_flow(video_ids, frame_list, bboxes, cxcywh=False) if self.use_flow else None
+        optical_features = self.load_optical_flow(video_ids, frame_list, bboxes, bbox_type=self.args.bbox_type) if self.use_flow else None
         depth_features = self.load_depth(video_ids, frame_list, bboxes) if self.use_depth else None
         
         absolute_bboxes = bboxes.copy()
