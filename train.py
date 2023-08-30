@@ -40,12 +40,12 @@ def train_traj(model, optimizer, scheduler, train_loader, val_loader, args, reco
 
         if isinstance(scheduler, torch.optim.lr_scheduler.ReduceLROnPlateau):
             scheduler.step(val_loss)
-        elif isinstance(scheduler, torch.optim.lr_scheduler.ExponentialLR):
-            scheduler.step()
         elif scheduler is None:
             pass
         else:
-            raise NotImplementedError
+            scheduler.step()
+        
+        break
 
 
 def train_traj_epoch(epoch, model, optimizer, epoch_loss, dataloader, args, recorder, writer):
