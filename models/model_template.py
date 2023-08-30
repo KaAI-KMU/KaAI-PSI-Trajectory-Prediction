@@ -79,8 +79,9 @@ class ModelTemplate(nn.Module):
                 key='flow_fc.weight'
             elif key == 'flow_fc.0.bias':
                 key='flow_fc.bias'
-                
-            # key = key[key.find('.')+1:] # TODO: have to be modified
+
+            if key.startswith('module.'):
+                key = key[key.find('.')+1:]
             if 'feature_extractor' in key: # feature_extractor is renamed to bbox_module
                 key = key.replace('feature_extractor', 'bbox_module')
             if key in state_dict and state_dict[key].shape == val.shape:
