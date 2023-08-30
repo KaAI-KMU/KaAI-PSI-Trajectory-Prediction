@@ -11,11 +11,11 @@ model_cfg:
 
         flow_module:
                 input_dim: 2
-                output_dim: 320
+                output_dim: 256
 
         speed_module:
                 input_dim: 1
-                output_dim: 64
+                output_dim: 128
 
         pred_dim: 4
         hidden_size: 512
@@ -32,4 +32,6 @@ optimization:
         weight_decay: 0.0
 
 lr_scheduler:
-        scheduler: none
+        scheduler: StepLR
+        step_size: 5
+        gamma: 0.5

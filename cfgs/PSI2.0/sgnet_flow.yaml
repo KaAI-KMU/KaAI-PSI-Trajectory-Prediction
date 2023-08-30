@@ -43,14 +43,7 @@ optimization:
         lr: 0.00001
         weight_decay: 0.0
 
-# optimization:
-#         batch_size: 128
-#         num_epochs: 25
-
-#         optimizer: Adam
-#         lr: 0.001
-#         weight_decay: 0.0
-# lr_scheduler:
-#         scheduler: stepLR
-#         step_size: 7
-#         gamma: 0.2
+lr_scheduler:
+        scheduler: StepLR
+        step_size: 5
+        gamma: 0.5

@@ -27,6 +27,8 @@ class ModelTemplate(nn.Module):
             scheduler = CosineAnnealingWarmUpRestarts(optimizer, T_0=scheduler_cfg.T_0, T_mult=scheduler_cfg.T_mult,
                                                       eta_max=scheduler_cfg.eta_max, T_up=scheduler_cfg.T_up,
                                                       gamma=scheduler_cfg.gamma)
+        elif scheduler_cfg.scheduler == 'StepLR':
+            scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=scheduler_cfg.step_size, gamma=scheduler_cfg.gamma)
         elif scheduler_cfg.scheduler == 'none':
             scheduler = None
         else:
