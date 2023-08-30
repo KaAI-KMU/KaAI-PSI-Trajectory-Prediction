@@ -75,10 +75,11 @@ class VideoDataset(torch.utils.data.Dataset):
 
         input_bboxes = bboxes.copy()
         if self.use_flow:
-            if self.args.gen_center_of or False:
+            if self.args.gen_center_of and False:
                 optical_features = self.load_optical_flow_(video_ids, frame_list, bboxes, bbox_type=self.args.bbox_type)
             else:
                 optical_features = self.load_optical_flow(video_ids, frame_list, ped_ids[0])
+                optical_features1 = self.load_optical_flow_(video_ids, frame_list, bboxes, bbox_type=self.args.bbox_type)
 
         else:
             optical_features = None
@@ -164,7 +165,7 @@ class VideoDataset(torch.utils.data.Dataset):
             bbox = bboxes[i]
             # load original image
             # print(video_id, frame_list, video_name, frame_id, bbox)
-            if i == 0:
+            if frame_id == 0:
                 center_flows.append([0.0, 0.0])
                 continue
             flow_path = os.path.join(self.flow_path, video_name, f"{str(frame_id).zfill(6)}.flo")
@@ -195,7 +196,7 @@ class VideoDataset(torch.utils.data.Dataset):
 
         for i in range(len(frame_list)):
 
-            if i == 0: 
+            if frame_list[i] == 0: 
                 center_flows.append(torch.tensor([0.0, 0.0]))
                 continue
 
