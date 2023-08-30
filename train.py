@@ -44,8 +44,6 @@ def train_traj(model, optimizer, scheduler, train_loader, val_loader, args, reco
             pass
         else:
             scheduler.step()
-        
-        break
 
 
 def train_traj_epoch(epoch, model, optimizer, epoch_loss, dataloader, args, recorder, writer):
