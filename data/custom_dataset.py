@@ -19,9 +19,11 @@ class VideoDataset(torch.utils.data.Dataset):
         self.stage = stage
         self.set_transform()
         self.flow_path = os.path.join(args.dataset_root_path, 'optical_flow')
+        self.center_flow_path = os.path.join(args.dataset_root_path, 'center_of')
         self.depth_path = os.path.join(args.dataset_root_path, 'depth')
         self.use_flow = args.use_flow
         self.use_depth = args.use_depth
+        self.gen_center_of = args.gen_center_of
         print(self.data.keys())
 
     def __getitem__(self, index):
@@ -72,11 +74,21 @@ class VideoDataset(torch.utils.data.Dataset):
         )
 
         input_bboxes = bboxes.copy()
-        optical_features = self.load_optical_flow(video_ids, frame_list, bboxes, bbox_type=self.args.bbox_type) if self.use_flow else None
-        depth_features = self.load_depth(video_ids, frame_list, bboxes) if self.use_depth else None
+        if self.use_flow:
+            if self.args.gen_center_of or False:
+                optical_features = self.load_optical_flow_(video_ids, frame_list, bboxes, bbox_type=self.args.bbox_type)
+            else:
+                optical_features = self.load_optical_flow(video_ids, frame_list, ped_ids[0])
+
+        else:
+            optical_features = None
+
+        if self.use_depth:
+            depth_features = self.load_depth(video_ids, frame_list, bboxes)
+        else:
+            depth_features = None
         
         absolute_bboxes = bboxes.copy()
-        optical_features = self.load_optical_flow(video_ids, frame_list, bboxes, bbox_type=self.args.bbox_type) if self.use_flow else None
         if not self.args.absolute_bbox_input:
             input_bboxes = input_bboxes - input_bboxes[:1, :]
 
@@ -143,7 +155,7 @@ class VideoDataset(torch.utils.data.Dataset):
 
         return flo_array
     
-    def load_optical_flow(self, video_ids, frame_list, bboxes, normalized=True, bbox_type='cxcywh'):
+    def load_optical_flow_(self, video_ids, frame_list, bboxes, normalized=True, bbox_type='cxcywh'):
         center_flows = []
         video_name = video_ids[0]
 
@@ -152,13 +164,12 @@ class VideoDataset(torch.utils.data.Dataset):
             bbox = bboxes[i]
             # load original image
             # print(video_id, frame_list, video_name, frame_id, bbox)
-            # 첫 번째 프레임 예외처리
             if i == 0:
                 center_flows.append([0.0, 0.0])
                 continue
             flow_path = os.path.join(self.flow_path, video_name, f"{str(frame_id).zfill(6)}.flo")
             # print(img_path)
-            scene_flow = self.read_flo_file(flow_path) # numpy load로 변경
+            scene_flow = self.read_flo_file(flow_path)
             if normalized:
                 if bbox_type == 'cxcywh':
                     cx, cy, _, _ = bbox
@@ -176,11 +187,25 @@ class VideoDataset(torch.utils.data.Dataset):
                 raise NotImplementedError
 
             center_flows.append(flow)
-
-        #return torch.stack(center_flows) # Time x Channel x H x W
         return torch.stack([torch.tensor(flow) for flow in center_flows])
-        #return torch.tensor(center_flows)
     
+    def load_optical_flow(self, video_ids, frame_list, track_ids):
+        center_flows = []
+        video_name = video_ids[0]
+
+        for i in range(len(frame_list)):
+
+            if i == 0: 
+                center_flows.append(torch.tensor([0.0, 0.0]))
+                continue
+
+            # Load center flow from .npy file
+            flow_path = os.path.join(self.center_flow_path, video_name, f"{frame_list[i]}_{track_ids}.npy")
+            center_flow = torch.from_numpy(np.load(flow_path))
+            center_flows.append(center_flow)
+
+        return torch.stack(center_flows)
+
     
     def load_reason_features(self, video_ids, ped_ids, frame_list):
         feat_list = []
@@ -212,7 +237,6 @@ class VideoDataset(torch.utils.data.Dataset):
             frame_id = frame_list[i]
             bbox = bboxes[i]
 
-            # 첫 번째 프레임 예외처리
             if i == 0:
                 center_depths.append(0.0)
                 continue

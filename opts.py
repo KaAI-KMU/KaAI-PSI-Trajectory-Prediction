@@ -59,6 +59,8 @@ def get_opts():
                         help='val mode')
     parser.add_argument('--save_all_checkpoint', action='store_true', default=False,
                         help='save all checkpoint')
+    parser.add_argument('--gen_center_of', action='store_true', default=False,
+                        help='generate center optical flow')
     
     # about models
     parser.add_argument('--backbone', type=str, default='resnet50',
