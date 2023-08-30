@@ -1,0 +1,57 @@
+model_name: SGNetCVAETrajBbox
+dataset: PSI2.0
+
+model_cfg:
+        observe_length: 15
+        predict_length: 45
+
+        bbox_module:
+                input_dim: 4
+                output_dim: 256
+
+        depth_module:
+                input_dim: 1
+                output_dim: 128
+
+        speed_module:
+                input_dim: 1
+                output_dim: 128
+
+        flow_module:
+                input_dim: 2
+                output_dim: 256
+
+        cvae:
+                input_dim: 4
+                pred_dim: 4
+                latent_dim: 32
+                hidden_size: 512
+                nu: 0.0
+                sigma: 1.5
+                latent_dim: 32
+                dec_with_z: True
+
+        input_dim: 4
+        pred_dim: 4
+        hidden_size: 512
+        latent_dim: 32
+        enc_steps: 15
+        dec_steps: 45
+        dropout: 0.0
+        K: 1 #20
+
+optimization:
+        batch_size: 8
+        num_epochs: 50
+
+        optimizer: Adam
+        lr: 0.0005
+        weight_decay: 0.0
+
+lr_scheduler:
+        scheduler: ReduceLROnPlateau
+        factor: 0.2
+        patience: 5
+        min_lr: 0.0000000001 # 1e-10
+        #scheduler: ExponentialLR
+        #gamma: 0.9

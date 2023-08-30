@@ -27,10 +27,20 @@ class SGNetCVAETrajBbox(ModelTemplate):
         self.dropout = model_cfg.dropout
         self.use_speed = model_cfg.get('speed_module', None) is not None
         self.use_flow = model_cfg.get('flow_module', None) is not None
+        self.use_depth = model_cfg.get('depth_module', None) is not None
 
         self.bbox_module = SgnetFeatureExtractor(model_cfg.bbox_module)
         traj_enc_cell_hidden_size = model_cfg.bbox_module.output_dim + self.hidden_size//4
         dec_cell_hidden_size = self.hidden_size + self.hidden_size//4
+            
+        if self.use_depth:
+            self.depth_module = SgnetFeatureExtractor(model_cfg.depth_module)
+            self.depth_fc = nn.Linear(self.observe_length, 1)
+            dec_cell_hidden_size += model_cfg.depth_module.output_dim
+        else:
+            self.depth_module = None
+            self.depth_fc = None
+            
         if self.use_speed:
             self.speed_module = SgnetFeatureExtractor(model_cfg.speed_module)
             self.speed_fc = nn.Linear(self.observe_length, 1)
@@ -122,6 +132,7 @@ class SGNetCVAETrajBbox(ModelTemplate):
     def cvae_decoder(self, dec_hidden, goal_for_dec, additional_dict=None):
         speed_input = additional_dict.get('speed_input', None) if additional_dict is not None else None
         flow_input = additional_dict.get('flow_input', None) if additional_dict is not None else None
+        depth_input = additional_dict.get('depth_input', None) if additional_dict is not None else None
         batch_size = dec_hidden.size(0)
        
         K = dec_hidden.shape[1]
@@ -145,6 +156,9 @@ class SGNetCVAETrajBbox(ModelTemplate):
             if flow_input is not None:
                 flow_input = flow_input.view(-1, flow_input.shape[-1])
                 dec_input = torch.cat((dec_input, flow_input), dim=-1)
+            if depth_input is not None:
+                depth_input = depth_input.view(-1, depth_input.shape[-1])
+                dec_input = torch.cat((dec_input, depth_input), dim=-1)
             dec_input = self.dec_drop(dec_input)
             dec_hidden = self.dec_cell(dec_input, dec_hidden)
             # regress dec traj for loss
@@ -188,12 +202,19 @@ class SGNetCVAETrajBbox(ModelTemplate):
 
         additional_dict = {}
         bbox_input = self.bbox_module(bboxes)
+        
+        if self.use_depth:
+            depth = data['depth'].unsqueeze(2).to(device).type(FloatTensor)
+            depth_input = self.depth_module(depth)
+            depth_input = self.depth_fc(depth_input.permute(0,2,1)).repeat(1,1,self.K).permute(0,2,1).reshape(-1,depth_input.shape[-1])
+            additional_dict['depth_input'] = depth_input
 
         if self.use_speed:
             speed = data['speed'][:, :self.observe_length, :].to(device).type(FloatTensor)
             speed_input = self.speed_module(speed)
             speed_input = self.speed_fc(speed_input.permute(0,2,1)).repeat(1,1,self.K).permute(0,2,1).reshape(-1,speed_input.shape[-1])
             additional_dict['speed_input'] = speed_input
+            
         if self.use_flow:
             flow = data['optical_flow'][:, :self.observe_length, :].to(device).type(FloatTensor)
             flow_input = self.flow_module(flow)

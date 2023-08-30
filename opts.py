@@ -129,6 +129,10 @@ def get_opts():
         args.use_speed = True
     else:
         args.use_speed = False
+    if cfg.model_cfg.get('depth_module', None) is not None:
+        args.use_depth = True
+    else:
+        args.use_depth = False
 
     args.observe_length = cfg.model_cfg.observe_length
     args.predict_length = cfg.model_cfg.predict_length
