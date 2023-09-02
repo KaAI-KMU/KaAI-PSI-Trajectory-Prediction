@@ -53,10 +53,12 @@ def get_opts():
                         help='Path of the pre-trained pt file')
     parser.add_argument('--visualize', action='store_true', default=False,
                         help='visualize gt&pred')
-    parser.add_argument('--test', action='store_true', default=False,
-                        help='test mode')
+    parser.add_argument('--train', action='store_true', default=False,
+                        help='train mode')
     parser.add_argument('--val', action='store_true', default=False,
                         help='val mode')
+    parser.add_argument('--test', action='store_true', default=False,
+                        help='test mode')
     parser.add_argument('--save_all_checkpoint', action='store_true', default=False,
                         help='save all checkpoint')
     parser.add_argument('--gen_center_of', action='store_true', default=False,
@@ -67,7 +69,7 @@ def get_opts():
                         help='Backbone type [resnet50 | vgg16 | faster_rcnn]')
     parser.add_argument('--freeze_backbone', type=bool, default=False,
                         help='[True | False]')
-    parser.add_argument('--absolute_bbox_input', action='store_true', default=False,
+    parser.add_argument('--relative_bbox_input', action='store_true', default=False,
                         help='Use relative bbox as input')
     
     # about training
@@ -106,6 +108,8 @@ def get_opts():
                         help='frequency of print')
     
     args = EasyDict(vars(parser.parse_args()))
+
+    assert args.train or args.val or args.test or args.gen_center_of, "Please specify at least one mode: [train | val | test | gen_center_of]"
     
     with open(args.config_file, 'r') as f:
         try:
@@ -136,6 +140,7 @@ def get_opts():
     else:
         args.use_depth = False
 
+    args.absolute_bbox_input = not args.relative_bbox_input
     args.observe_length = cfg.model_cfg.observe_length
     args.predict_length = cfg.model_cfg.predict_length
     args.model_name = cfg.model_name

@@ -17,21 +17,32 @@ def main(args, config):
     writer = SummaryWriter(args.checkpoint_path)
     recorder = RecordResults(args)
     ''' 1. Load database '''
-    if not os.path.exists(os.path.join(args.database_path, args.database_file)):
-        create_database(args)
+    database_files = ['traj_databse_train.pkl',
+                     'traj_database_val.pkl',
+                     'traj_databse_trainval.pkl',
+                     ]
+    database_exist = True
+    for database_file in database_files:
+        if not os.path.exists(os.path.join(args.database_path, database_file)):
+            database_exist = False
+            break
+    if not database_exist:
+        create_database(args) # create database except test set. database of test set is provided by PSI.
     else:
         print("Database exists!")
-    train_loader, val_loader, test_loader = get_dataloader(args)
+    train_loader, val_loader, trainval_loader, test_loader = get_dataloader(args)
 
     ''' 2. Create models '''
     model, optimizer, scheduler = build_model(config, pretrained_path=args.pretrained_path)
 
     ''' 3. Train models '''
-    if not (args.val or args.test):
+    if args.train:
         train_traj(model, optimizer, scheduler, train_loader, val_loader, args, recorder, writer)
+    if args.trainval:
+        train_traj(model, optimizer, scheduler, trainval_loader, None, args, recorder, writer)
 
     ''' 4. Validation '''
-    if not args.test:
+    if args.val or args.train:
         val_gt_file = './test_gt/val_traj_gt.json'
         if not os.path.exists(val_gt_file):
             get_test_traj_gt(model, val_loader, args, dset='val')
@@ -39,7 +50,7 @@ def main(args, config):
         score = evaluate_traj(val_gt_file, args.checkpoint_path + '/results/val_traj_pred.json', args)
 
     ''' 4. Create test_traj_pred.json for submit '''
-    if not args.val:
+    if args.test or args.train or args.trainval:
         predict_traj(model, test_loader, args, dset='test')
         print("Finished generating test_traj_pred.json")
 

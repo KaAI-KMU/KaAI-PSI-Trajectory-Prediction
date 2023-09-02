@@ -14,28 +14,35 @@ def get_dataloader(args, shuffle_train=True, drop_last_train=True):
     with open(os.path.join(args.database_path, 'traj_database_val.pkl'), 'rb') as fid:
         imdb_val = pickle.load(fid)
     val_seq = generate_data_sequence('val', imdb_val, args)
+    with open(os.path.join(args.database_path, 'traj_database_trainval.pkl'), 'rb') as fid:
+        imdb_trainval = pickle.load(fid)
+    trainval_seq = generate_data_sequence('trainval', imdb_trainval, args)
     with open(os.path.join(args.database_path, 'traj_database_test.pkl'), 'rb') as fid:
         imdb_test = pickle.load(fid)
     test_seq = generate_data_sequence('test', imdb_test, args)
 
     train_d = get_train_val_data(train_seq, args, overlap=args.seq_overlap_rate) # returned tracks
     val_d = get_train_val_data(val_seq, args, overlap=args.test_seq_overlap_rate)
+    trainval_d = get_train_val_data(trainval_seq, args, overlap=args.seq_overlap_rate)
     test_d = get_test_data(test_seq, args, overlap=args.test_seq_overlap_rate)
 
     # Create video dataset and dataloader
     train_dataset = VideoDataset(train_d, args)
     val_dataset = VideoDataset(val_d, args)
+    trainval_dataset = VideoDataset(trainval_d, args)
     test_dataset = VideoDataset(test_d, args)
-    print(len(train_dataset), len(val_dataset), len(test_dataset))
+    print(len(train_dataset), len(val_dataset), len(trainval_dataset), len(test_dataset))
 
     train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=args.batch_size, shuffle=shuffle_train,
                                            pin_memory=True, sampler=None, drop_last=drop_last_train, num_workers=args.num_workers)
     val_loader = torch.utils.data.DataLoader(val_dataset, batch_size=args.batch_size, shuffle=False,
                                               pin_memory=True, sampler=None, drop_last=False, num_workers=args.num_workers)
+    trainval_loader = torch.utils.data.DataLoader(trainval_dataset, batch_size=args.batch_size, shuffle=shuffle_train,
+                                                pin_memory=True, sampler=None, drop_last=False, num_workers=args.num_workers)
     test_loader = torch.utils.data.DataLoader(test_dataset, batch_size=args.batch_size, shuffle=False,
                                               pin_memory=True, sampler=None, drop_last=False, num_workers=args.num_workers)
 
-    return train_loader, val_loader, test_loader
+    return train_loader, val_loader, trainval_loader, test_loader
 
 
 def get_train_val_data(data, args, overlap=0.5):  # overlap==0.5, seq_len=15

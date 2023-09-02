@@ -28,9 +28,11 @@ db = {
 
 
 def create_database(args):
-    for split_name in ['train', 'val', 'test']:
-        with open(args.video_splits) as f:
-            datasplits = json.load(f)
+    # test set is provided by PSI
+    with open(args.video_splits) as f:
+        datasplits = json.load(f)
+    datasplits['trainval'] = datasplits['train'] + datasplits['val']
+    for split_name in ['train', 'val', 'trainval']:
         db_log = os.path.join(args.database_path, split_name + '_db_log.txt')
         with open(db_log, 'w') as f:
             f.write(f"Initialize {split_name} database \n")
