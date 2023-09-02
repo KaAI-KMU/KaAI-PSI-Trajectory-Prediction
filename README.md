@@ -11,11 +11,12 @@ Install pytorch. Please refer to [pytorch](https://pytorch.org/get-started/local
 ```buildoutcfg
 pip3 install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu118
 ```
-
+Create conda environment.
 ```buildoutcfg
 conda env create -n {env_name} python=3.8
 conda activate {env_name}
 ```
+Install other dependencies.
 ```buildoutcfg
 cd KaAI-PSI-Trajectory-Prediction
 pip install -r requirements.txt
