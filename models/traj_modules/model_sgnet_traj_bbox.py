@@ -1,3 +1,7 @@
+'''
+This codes are modified from official inplementation of SGNet.
+https://github.com/ChuhuaW/SGNet.pytorch/blob/main/lib/models/SGNet.py
+'''
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
