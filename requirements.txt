@@ -4,3 +4,4 @@ tensorboard
 opencv-python
 matplotlib
 tqdm
+scikit-learn
