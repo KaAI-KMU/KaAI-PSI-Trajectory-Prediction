@@ -54,9 +54,11 @@ def get_opts():
     parser.add_argument('--visualize', action='store_true', default=False,
                         help='visualize gt&pred')
     parser.add_argument('--train', action='store_true', default=False,
-                        help='train mode')
+                        help='train mode')    
     parser.add_argument('--val', action='store_true', default=False,
                         help='val mode')
+    parser.add_argument('--trainval', action='store_true', default=False,
+                        help='trainval mode')
     parser.add_argument('--test', action='store_true', default=False,
                         help='test mode')
     parser.add_argument('--save_all_checkpoint', action='store_true', default=False,
@@ -109,7 +111,7 @@ def get_opts():
     
     args = EasyDict(vars(parser.parse_args()))
 
-    assert args.train or args.val or args.test or args.gen_center_of, "Please specify at least one mode: [train | val | test | gen_center_of]"
+    assert args.train or args.val or args.test or args.trainval or args.gen_center_of, "Please specify at least one mode: [train | val | test | gen_center_of]"
     
     with open(args.config_file, 'r') as f:
         try:
