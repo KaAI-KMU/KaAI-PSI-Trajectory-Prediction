@@ -71,17 +71,17 @@ You can download the pre-trained models from [here](https://drive.google.com/fil
 ## 2. TRAINING
 ### 2.1. Train the model
 ```buildoutcfg
-python main.py --config_file configs/psi2.0/sgnet_cvae_flow.yaml --train --pretrained_path SGNet_pretrained_with_JAAD.pth --extra_tag {extra_tag} --epochs 1
+python main.py --config_file cfgs/PSI2.0/sgnet_cvae_flow.yaml --train --pretrained_path SGNet_pretrained_with_JAAD.pth --extra_tag {extra_tag} --epochs 1
 ```
-The model converges after 1 epoch if you use the pre-trained model.
+The model will converge after 1 epoch if you use the pre-trained model.
 
 
 The results will be saved in KaAI-PSI-Trajectory-Prediction/ckpts/ped_traj/PSI2.0/SGNetCVAETrajBbox/{extra_tag}.
 
 
-If you want to train the model with full training set(validation set is used as training set), please use --trainval option instead of --train option. (**We used full training set for training the submitted model.**)
+If you want to train the model with full training set(validation set is used as training set), please use --trainval option instead of --train option. (**We used full training set to train the submitted model.**)
 ```buildoutcfg
-python main.py --config_file configs/psi2.0/sgnet_cvae_flow.yaml --train --pretrained_path SGNet_pretrained_with_JAAD.pth --extra_tag {extra_tag} --epochs 1
+python main.py --config_file cfgs/PSI2.0/sgnet_cvae_flow.yaml --trainval --pretrained_path SGNet_pretrained_with_JAAD.pth --extra_tag {extra_tag} --epochs 1
 ```
 ## 3. EVALUATION
 ### 3.1. Evaluate the model with validation set
