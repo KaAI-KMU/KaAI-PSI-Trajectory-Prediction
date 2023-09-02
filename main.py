@@ -49,8 +49,11 @@ def main(args, config):
         predict_traj(model, val_loader, args, dset='val')
         score = evaluate_traj(val_gt_file, args.checkpoint_path + '/results/val_traj_pred.json', args)
 
-    ''' 4. Create test_traj_pred.json for submit '''
+    ''' 5. Test '''
     if args.test or args.train or args.trainval:
+        val_gt_file = './test_gt/val_traj_gt.json'
+        if not os.path.exists(val_gt_file):
+            get_test_traj_gt(model, val_loader, args, dset='val')
         predict_traj(model, test_loader, args, dset='test')
         print("Finished generating test_traj_pred.json")
 

@@ -256,5 +256,6 @@ def get_test_traj_gt(model, dataloader, args, dset='test'):
                 gt[vid][pid][fid] = {}
             gt[vid][pid][fid]['traj'] = traj_gt[i].detach().cpu().numpy().tolist()
             # print(len(traj_pred[i].detach().cpu().numpy().tolist()))
+    os.makedirs(os.path.join(f'./test_gt'), exist_ok=True)
     with open(os.path.join(f'./test_gt/{dset}_traj_gt.json'), 'w') as f:
         json.dump(gt, f)
