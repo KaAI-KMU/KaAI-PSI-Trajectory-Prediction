@@ -17,9 +17,9 @@ def main(args, config):
     writer = SummaryWriter(args.checkpoint_path)
     recorder = RecordResults(args)
     ''' 1. Load database '''
-    database_files = ['traj_databse_train.pkl',
+    database_files = ['traj_database_train.pkl',
                      'traj_database_val.pkl',
-                     'traj_databse_trainval.pkl',
+                     'traj_database_trainval.pkl',
                      ]
     database_exist = True
     for database_file in database_files:
