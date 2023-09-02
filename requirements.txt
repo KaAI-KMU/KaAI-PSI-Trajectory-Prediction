@@ -1,0 +1,6 @@
+PyYAML
+easydict
+tensorboard
+opencv-python
+matplotlib
+tqdm
