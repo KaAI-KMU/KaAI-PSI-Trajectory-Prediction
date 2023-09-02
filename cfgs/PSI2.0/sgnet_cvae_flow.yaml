@@ -11,7 +11,7 @@ model_cfg:
 
         flow_module:
                 input_dim: 2
-                output_dim: 256
+                output_dim: 320
 
         cvae:
                 input_dim: 4
