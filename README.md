@@ -7,6 +7,11 @@ The codes are based on [PSI-Trajectory-Prediction](https://github.com/PSI-Intent
 git clone https://github.com/KaAI-KMU/KaAI-PSI-Trajectory-Prediction.git
 ```
 ### 1.1. Install dependencies
+Install pytorch. Please refer to [pytorch](https://pytorch.org/get-started/locally/) for the details of installation.
+```buildoutcfg
+pip3 install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu118
+```
+
 ```buildoutcfg
 conda env create -n {env_name} python=3.8
 conda activate {env_name}
