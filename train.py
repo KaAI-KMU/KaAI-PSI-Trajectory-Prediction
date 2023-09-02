@@ -24,7 +24,7 @@ def train_traj(model, optimizer, scheduler, train_loader, val_loader, args, reco
         recorder.train_epoch_reset(epoch, niters)
         epoch_loss = train_traj_epoch(epoch, model, optimizer, epoch_loss, train_loader, args, recorder, writer)
 
-        if epoch % args.val_freq == 0:
+        if epoch % args.val_freq == 0 and val_loader is not None:
             niters = len(val_loader)
             recorder.eval_epoch_reset(epoch, niters)
             _, val_score, val_loss = validate_traj(model, val_loader, args, recorder, writer) #backbone_model) 
@@ -33,12 +33,12 @@ def train_traj(model, optimizer, scheduler, train_loader, val_loader, args, reco
                 best_val_score = val_score
                 torch.save(model.state_dict(), args.checkpoint_path + f'/best.pth')
 
-        if args.save_all_checkpoint:
+        if args.save_all_checkpoint or val_loader is None:
             torch.save(model.state_dict(), args.checkpoint_path + f'/epoch_{epoch}.pth')
         else:
             torch.save(model.state_dict(), args.checkpoint_path + f'/latest.pth')
 
-        if isinstance(scheduler, torch.optim.lr_scheduler.ReduceLROnPlateau):
+        if isinstance(scheduler, torch.optim.lr_scheduler.ReduceLROnPlateau) and val_loader is not None:
             scheduler.step(val_loss)
         elif scheduler is None:
             pass
