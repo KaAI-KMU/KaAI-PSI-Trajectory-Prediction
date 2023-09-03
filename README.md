@@ -70,6 +70,9 @@ You can download the pre-trained models from [here](https://drive.google.com/fil
 
 ## 2. TRAINING
 ### 2.1. Train the model
+**Train the model with training set and validate with validation set.(for dry-run)**
+
+
 ```buildoutcfg
 python main.py --config_file cfgs/PSI2.0/sgnet_cvae_flow.yaml --train --pretrained_path SGNet_pretrained_with_JAAD.pth --extra_tag {extra_tag} --epochs 1
 ```
@@ -78,8 +81,7 @@ The model will converge after 1 epoch if you use the pre-trained model.
 
 The results will be saved in KaAI-PSI-Trajectory-Prediction/ckpts/ped_traj/PSI2.0/SGNetCVAETrajBbox/{extra_tag}.
 
-
-If you want to train the model with full training set(validation set is used as training set), use --trainval option instead of --train option. (**We used full training set to train the finally submitted model.**)
+**Train the model with full dataset.(for test)**
 ```buildoutcfg
 python main.py --config_file cfgs/PSI2.0/sgnet_cvae_flow.yaml --trainval --pretrained_path SGNet_pretrained_with_JAAD.pth --extra_tag {extra_tag} --epochs 1
 ```
