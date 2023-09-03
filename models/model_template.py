@@ -73,11 +73,7 @@ class ModelTemplate(nn.Module):
         # Update the state_dict based on the model_state_disk
         update_model_state = {}
         for key, val in model_state_disk.items():
-            if key =='speed_fc.0.weight' :
-                key='speed_fc.weight'
-            elif key == 'speed_fc.0.bias' :
-                key='speed_fc.bias'
-            elif key == 'flow_fc.0.weight':
+            if key == 'flow_fc.0.weight':
                 key='flow_fc.weight'
             elif key == 'flow_fc.0.bias':
                 key='flow_fc.bias'

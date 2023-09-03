@@ -26,19 +26,11 @@ class SGNetTrajBbox(ModelTemplate):
         self.enc_steps = model_cfg.enc_steps
         self.dec_steps = model_cfg.dec_steps
         self.dropout = model_cfg.dropout
-        self.use_speed = model_cfg.get('speed_module', None) is not None
         self.use_flow = model_cfg.get('flow_module', None) is not None
 
         self.bbox_module = SgnetFeatureExtractor(model_cfg.bbox_module)
         traj_enc_cell_hidden_size = model_cfg.bbox_module.output_dim + self.hidden_size//4
         dec_cell_hidden_size = self.hidden_size + self.hidden_size//4
-        if self.use_speed:
-            self.speed_module = SgnetFeatureExtractor(model_cfg.speed_module)
-            self.speed_fc = nn.Linear(self.observe_length, 1)
-            dec_cell_hidden_size += model_cfg.speed_module.output_dim
-        else:
-            self.speed_module = None
-            self.speed_fc = None
         if self.use_flow:
             self.flow_module = SgnetFeatureExtractor(model_cfg.flow_module) if self.use_flow else None
             self.flow_fc = nn.Linear(self.observe_length, 1)
@@ -168,11 +160,6 @@ class SGNetTrajBbox(ModelTemplate):
 
         traj_input = self.bbox_module(bboxes)
         additional_dict = {}
-        if self.use_speed:
-            speed = data['speed'][:, :self.observe_length, :].to(device).type(FloatTensor)
-            speed_input = self.speed_module(speed)
-            speed_input = self.speed_fc(speed_input.permute(0,2,1)).permute(0,2,1).reshape(-1,speed_input.shape[-1])
-            additional_dict['speed_input'] = speed_input
         if self.use_flow:
             flow = data['optical_flow'][:, :self.observe_length, :].to(device).type(FloatTensor)
             flow_input = self.flow_module(flow)
