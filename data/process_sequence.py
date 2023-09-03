@@ -11,7 +11,7 @@ def generate_data_sequence(set_name, database, args):
     box_seq = []
     description_seq = []
     disagree_score_seq = []
-    speed_seq = []
+
 
     video_ids = sorted(database.keys())
     for video in sorted(video_ids): # video_name: e.g., 'video_0001'
@@ -23,14 +23,11 @@ def generate_data_sequence(set_name, database, args):
             pids_seq.append([ped] * n)
             video_seq.append([video] * n)
             intents, probs, disgrs, descripts = get_intent(database, video, ped, args)
-            speed = database[video][ped]['cv_annotations'].get('speed', None)
-            if speed is None:
-                speed = [0] * n
             intention_prob.append(probs)
             intention_binary.append(intents)
             disagree_score_seq.append(disgrs)
             description_seq.append(descripts)
-            speed_seq.append(speed)
+
 
     data_dict = {
         'frame': frame_seq,
@@ -40,8 +37,7 @@ def generate_data_sequence(set_name, database, args):
         'ped_id': pids_seq,
         'video_id': video_seq,
         'disagree_score': disagree_score_seq,
-        'description': description_seq,
-        'speed': speed_seq
+        'description': description_seq
     }
 
     return data_dict
@@ -51,7 +47,6 @@ def get_intent(database, video_name, ped_id, args):
     intent_seq = []
     disagree_seq = []
     description_seq = []
-    speed_seq = []
     n_frames = len(database[video_name][ped_id]['frames'])
 
     if args.intent_type == 'major' or args.intent_type == 'soft_vote':
@@ -60,8 +55,6 @@ def get_intent(database, video_name, ped_id, args):
         for i in range(n_frames):
             labels = [database[video_name][ped_id]['nlp_annotations'][vid_uid]['intent'][i] for vid_uid in vid_uid_pairs]
             descriptions = [database[video_name][ped_id]['nlp_annotations'][vid_uid]['description'][i] for vid_uid in vid_uid_pairs]
-            if args.speed:
-                speeds = [database[video_name][ped_id]['nlp_annotations'][vid_uid]['speed'][i] for vid_uid in vid_uid_pairs]  # Added speed retrieval
                 
             if args.intent_num == 3: # major 3 class, use cross-entropy loss
                 uni_lbls, uni_cnts = np.unique(labels, return_counts=True)
@@ -80,8 +73,7 @@ def get_intent(database, video_name, ped_id, args):
                 intent_seq.append(intent_binary)
                 disagree_seq.append(1 - intent_prob)
                 description_seq.append(descriptions)
-                if args.speed:
-                    speed_seq.append(speeds)
+
             elif args.intent_num == 2: # only counts labels not "not-sure", but will involve issues if all annotators are not-sure.
                 raise Exception("Sequence processing not implemented!")
             else:
