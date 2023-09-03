@@ -51,10 +51,11 @@ def main(args, config):
 
     ''' 5. Test '''
     if args.test or args.train or args.trainval:
-        val_gt_file = './test_gt/val_traj_gt.json'
-        if not os.path.exists(val_gt_file):
-            get_test_traj_gt(model, val_loader, args, dset='val')
+        test_gt_file = './test_gt/test_traj_gt.json'
+        if not os.path.exists(test_gt_file):
+            get_test_traj_gt(model, test_loader, args, dset='test')
         predict_traj(model, test_loader, args, dset='test')
+        score = evaluate_traj(test_gt_file, args.checkpoint_path + '/results/test_traj_pred.json', args)
         print("Finished generating test_traj_pred.json")
 
 if __name__ == '__main__':
