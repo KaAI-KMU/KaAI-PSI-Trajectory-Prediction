@@ -93,12 +93,12 @@ As default, the model will be evaluated when the training is finished.
 
 However, if you want to evaluate the model with the specific checkpoint with validation set, use --pretrained_path option.
 ```buildoutcfg
-python main.py --config_file configs/psi2.0/sgnet_cvae_flow.yaml --val --pretrained_path {pretrained_path} --extra_tag {extra_tag}
+python main.py --config_file cfgs/PSI2.0/sgnet_cvae_flow.yaml --val --pretrained_path {pretrained_path} --extra_tag {extra_tag}
 ```
 The results will be saved in KaAI-PSI-Trajectory-Prediction/ckpts/ped_traj/PSI2.0/SGNetCVAETrajBbox/{extra_tag}.
 ### 3.2. Test the model
 If you want to test the model with test set, use --test option.
 ```buildoutcfg
-python main.py --config_file configs/psi2.0/sgnet_cvae_flow.yaml --test --pretrained_path {pretrained_path} --extra_tag {extra_tag}
+python main.py --config_file cfgs/PSI2.0/sgnet_cvae_flow.yaml --test --pretrained_path {pretrained_path} --extra_tag {extra_tag}
 ```
 The results will be saved in KaAI-PSI-Trajectory-Prediction/ckpts/ped_traj/PSI2.0/SGNetCVAETrajBbox/{extra_tag}.
