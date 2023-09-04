@@ -44,7 +44,7 @@ def main(args, config):
 
     generate_center_of(output_path, train_loader, dset='train')
     generate_center_of(output_path, val_loader, dset='val')
-    # generate_center_of(output_path, test_loader, args, dset='test')
+    generate_center_of(output_path, test_loader, args, dset='test')
 
 
 if __name__ == '__main__':
